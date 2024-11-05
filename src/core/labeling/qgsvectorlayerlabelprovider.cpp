@@ -311,6 +311,7 @@ QgsGeometry QgsVectorLayerLabelProvider::getPointObstacleGeometry( QgsFeature &f
   return QgsGeometry( std::move( obstacleGeom ) );
 }
 
+
 void QgsVectorLayerLabelProvider::drawLabelBackground( QgsRenderContext &context, LabelPosition *label ) const
 {
   if ( !mSettings.drawLabels )

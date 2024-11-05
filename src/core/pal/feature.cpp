@@ -2454,7 +2454,8 @@ std::vector< std::unique_ptr< LabelPosition > > FeaturePart::createCandidates( P
     {
       case GEOS_POINT:
         if ( mLF->layer()->arrangement() == Qgis::LabelPlacement::OrderedPositionsAroundPoint )
-          createCandidatesAtOrderedPositionsOverPoint( x[0], y[0], lPos, angleInRadians );
+          createCandidatesAtOrderedPositionsOverPoint( x[0] + mLF->symbolOffset().x(), y[0]+mLF->symbolOffset().y(),
+            lPos, angleInRadians );
         else if ( mLF->layer()->arrangement() == Qgis::LabelPlacement::OverPoint || mLF->hasFixedQuadrant() )
           createCandidatesOverPoint( x[0], y[0], lPos, angleInRadians );
         else

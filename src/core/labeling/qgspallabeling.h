@@ -681,6 +681,8 @@ class CORE_EXPORT QgsPalLayerSettings
     std::vector< std::unique_ptr< QgsLabelFeature > > registerFeatureWithDetails( const QgsFeature &feature, QgsRenderContext &context,
         QgsGeometry obstacleGeometry = QgsGeometry(), const QgsSymbol *symbol = nullptr );
 
+
+
 #endif
 
     /**
@@ -1081,6 +1083,8 @@ class CORE_EXPORT QgsPalLayerSettings
     Qgis::AngleUnit mRotationUnit = Qgis::AngleUnit::Degrees;
 
     static void initPropertyDefinitions();
+
+    static QPointF getMarkerOffset(QgsFeature &fet, QgsRenderContext &context, const QgsSymbol *symbol);
 };
 
 
@@ -1178,6 +1182,7 @@ class CORE_EXPORT QgsPalLabeling
      * \returns TRUE if geometry exceeds minimum size
      */
     static bool checkMinimumSizeMM( const QgsRenderContext &context, const QgsGeometry &geom, double minSize );
+
 
     friend class QgsPalLayerSettings;
 };

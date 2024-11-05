@@ -172,6 +172,27 @@ class CORE_EXPORT QgsLabelFeature
      */
     const QSizeF &symbolSize() const { return mSymbolSize; }
 
+
+    /**
+     * Sets the offset of the rendered symbol from the point feature. This offset determines
+     * the position of the point around which the label is placed.
+     * Applies to "offset from point" (LabelOffsetType::FromSymbolBounds) placement strategy
+     */
+    void setSymbolOffset( QPointF offset ) { mSymbolOffset = offset; }
+
+    /**
+     * Returns the offset of the rendered symbol from the point feature.This offset determines
+     * the position of the point around which the label is placed.
+     * Applies to "offset from point" (LabelOffsetType::FromSymbolBounds) placement strategy
+     */
+    const QPointF &symbolOffset() const { return mSymbolOffset; }
+
+
+
+
+
+
+
     /**
      * Returns the feature's labeling priority.
      * \returns feature's priority, as a value between 0 (highest priority)
@@ -773,6 +794,8 @@ class CORE_EXPORT QgsLabelFeature
     QgsMargins mVisualMargin;
     //! Size of associated rendered symbol, if applicable
     QSizeF mSymbolSize;
+    //! offset of symbol boundary center point from  feature (only for "offset from symbol" placement)
+    QPointF mSymbolOffset;
     //! Priority of the label
     double mPriority = -1;
     //! Z-index of label (higher z-index labels are rendered on top of lower z-index labels)
