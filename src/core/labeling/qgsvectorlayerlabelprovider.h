@@ -103,7 +103,7 @@ class CORE_EXPORT QgsVectorLayerLabelProvider : public QgsAbstractLabelProvider
      */
     static QgsGeometry getPointObstacleGeometry( QgsFeature &fet, QgsRenderContext &context, const QgsSymbolList &symbols );
 
-    static QPointF getMarkerOffset(QgsFeature &fet, QgsRenderContext &context, const QgsSymbolList &symbols);
+    static QPointF getMarkerOffset( QgsFeature &fet, QgsRenderContext &context, const QgsSymbolList &symbols );
 
     /**
      * Returns the layer's settings.

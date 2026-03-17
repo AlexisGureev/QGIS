@@ -1084,7 +1084,7 @@ class CORE_EXPORT QgsPalLayerSettings
 
     static void initPropertyDefinitions();
 
-    static QPointF getMarkerOffset(QgsFeature &fet, QgsRenderContext &context, const QgsSymbol *symbol);
+    static QPointF getMarkerOffset( QgsFeature &fet, QgsRenderContext &context, const QgsSymbol *symbol );
 };
 
 

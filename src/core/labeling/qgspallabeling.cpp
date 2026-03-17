@@ -3147,9 +3147,11 @@ std::unique_ptr< QgsTextLabelFeature> QgsPalLayerSettings::generateLabelFeature(
     labelFeature->setSymbolSize( QSizeF( obstacleGeometry.boundingBox().width(),
                                          obstacleGeometry.boundingBox().height() ) );
   }
-  if (placement == Qgis::LabelPlacement::OrderedPositionsAroundPoint) {
-    if ( offsetType== Qgis::LabelOffsetType::FromSymbolBounds) {
-      labelFeature->setSymbolOffset(QgsPalLabeling::getMarkerOffset(feature,context, symbol));
+  if ( placement == Qgis::LabelPlacement::OrderedPositionsAroundPoint )
+  {
+    if ( offsetType == Qgis::LabelOffsetType::FromSymbolBounds )
+    {
+      labelFeature->setSymbolOffset( QgsPalLabeling::getMarkerOffset( feature, context, symbol ) );
     }
   }
 
@@ -3340,28 +3342,33 @@ std::unique_ptr< QgsTextLabelFeature> QgsPalLayerSettings::generateLabelFeature(
   return labelFeature;
 }
 
-QPointF QgsPalLayerSettings::getMarkerOffset(QgsFeature &fet, QgsRenderContext &context, const QgsSymbol *symbol) {
-  if (!fet.hasGeometry() || fet.geometry().type() != Qgis::GeometryType::Point)
-    return QPointF(0, 0);
+QPointF QgsPalLayerSettings::getMarkerOffset( QgsFeature &fet, QgsRenderContext &context, const QgsSymbol *symbol )
+{
+  if ( !fet.hasGeometry() || fet.geometry().type() != Qgis::GeometryType::Point )
+    return QPointF( 0, 0 );
 
   // get firs  point
   QRectF bounds;
-  QgsPoint p = fet.geometry().constGet()->vertexAt(QgsVertexId(0, 0, 0));
+  QgsPoint p = fet.geometry().constGet()->vertexAt( QgsVertexId( 0, 0, 0 ) );
   double x = p.x();
   double y = p.y();
   double z = 0; // dummy variable for coordinate transforms
 
   //transform point to pixels
-  if (context.coordinateTransform().isValid()) {
-    try {
-      context.coordinateTransform().transformInPlace(x, y, z);
-    } catch (QgsCsException &) {
-      return QPointF(0, 0);
+  if ( context.coordinateTransform().isValid() )
+  {
+    try
+    {
+      context.coordinateTransform().transformInPlace( x, y, z );
+    }
+    catch ( QgsCsException & )
+    {
+      return QPointF( 0, 0 );
     }
   }
-  context.mapToPixel().transformInPlace(x, y);
+  context.mapToPixel().transformInPlace( x, y );
 
-  QPointF pt(x, y);
+  QPointF pt( x, y );
   // const auto constSymbols = symbols;
   // for (QgsSymbol *symbol: constSymbols) {
   //   if (symbol->type() == Qgis::SymbolType::Marker) {
@@ -3372,9 +3379,10 @@ QPointF QgsPalLayerSettings::getMarkerOffset(QgsFeature &fet, QgsRenderContext &
   //   }
   // }
 
-  if (symbol->type() == Qgis::SymbolType::Marker) {
-    const QgsMarkerSymbol* markerSymbol = static_cast<const QgsMarkerSymbol *>(symbol);
-    bounds = markerSymbol->bounds(pt, context, fet);
+  if ( symbol->type() == Qgis::SymbolType::Marker )
+  {
+    const QgsMarkerSymbol *markerSymbol = static_cast<const QgsMarkerSymbol *>( symbol );
+    bounds = markerSymbol->bounds( pt, context, fet );
   }
 
   //convert bounds to a geometry
@@ -3383,21 +3391,26 @@ QPointF QgsPalLayerSettings::getMarkerOffset(QgsFeature &fet, QgsRenderContext &
   //then transform back to map units
   //TODO - remove when labeling is refactored to use screen units
   QgsPointXY point = context.mapToPixel()
-    .toMapCoordinates(static_cast<int>(markerCenter.x()), static_cast<int>(markerCenter.x()));
+                     .toMapCoordinates( static_cast<int>( markerCenter.x() ), static_cast<int>( markerCenter.x() ) );
 
   QPointF result = point.toQPointF();
-  if (context.coordinateTransform().isValid()) {
-    z=0;
-    try {
-      context.coordinateTransform().transformInPlace(result.rx(), result.ry(),z , Qgis::TransformDirection::Reverse);
-    } catch (QgsCsException &) {
-      return QPointF(0, 0);
+  if ( context.coordinateTransform().isValid() )
+  {
+    z = 0;
+    try
+    {
+      context.coordinateTransform().transformInPlace( result.rx(), result.ry(), z, Qgis::TransformDirection::Reverse );
     }
-    if (!std::isfinite(result.x()) &&  !std::isfinite(result.y())) {
+    catch ( QgsCsException & )
+    {
+      return QPointF( 0, 0 );
+    }
+    if ( !std::isfinite( result.x() ) &&  !std::isfinite( result.y() ) )
+    {
       return result;
     }
   }
-  return QPointF(0, 0);
+  return QPointF( 0, 0 );
 }
 
 
