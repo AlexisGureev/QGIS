@@ -17,7 +17,6 @@
 #define QGS3DMAPCANVASWIDGET_H
 
 #include "qgis_app.h"
-#include "qgscamerapose.h"
 #include "qgsgeometry.h"
 #include "qgsrectangle.h"
 #include "qobjectuniqueptr.h"
@@ -30,7 +29,6 @@
 #include <QWidgetAction>
 
 #define SIP_NO_FILE
-
 
 class QgsMapToolClippingPlanes;
 class Qgs3DMapToolPointCloudChangeAttributePaintbrush;
@@ -52,11 +50,14 @@ class QgsMapCanvas;
 class QgsDockableWidgetHelper;
 class QgsMessageBar;
 class QgsRubberBand;
+class QgsRubberBand3D;
 class QgsDoubleSpinBox;
 class Qgs3DMapClippingToleranceWidgetSettingsAction;
 class QgsSettingsEntryDouble;
 class QgsSettingsEntryBool;
 class QgsGeometry;
+class QgsElevationProfile;
+class QgsProfilePoint;
 
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
@@ -112,9 +113,16 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
 
     void nudgeCurve( Qgis::BufferSide side );
 
+    void setProfileData( QgsElevationProfile *profile, double zMin, double zMax );
+
+    void removeProfileData( QgsElevationProfile *profile );
+
+    void updateProfileCursorPosition( QgsElevationProfile *profile, const QgsPointXY &mapPoint, const QgsProfilePoint &profilePoint );
+
   private slots:
     void resetView();
     void configure();
+    void configureCamera();
     void saveAsImage();
     void toggleAnimations();
     void cameraControl();
@@ -160,6 +168,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void setClippingTolerance( double tolerance );
     void lockCrossSectionTolerance( bool enabled );
     void updateClippingRubberBand();
+    void updateProfileRubberBands( QgsElevationProfile *profile );
+    void hideProfileRubberBands( QgsElevationProfile *profile );
 
     QString mCanvasName;
     Qgs3DMapCanvas *mCanvas = nullptr;
@@ -192,6 +202,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QAction *mActionSync3DNavTo2D = nullptr;
     QAction *mShowFrustumPolygon = nullptr;
     QAction *mActionShow2DMapOverlay = nullptr;
+    QAction *mActionOpenCameraControlsWidget = nullptr;
     QAction *mActionAnim = nullptr;
     QAction *mActionExport = nullptr;
     QAction *mActionMapThemes = nullptr;
@@ -213,6 +224,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QObjectUniquePtr<QgsRubberBand> mViewFrustumHighlight;
     QObjectUniquePtr<QgsRubberBand> mViewExtentHighlight;
     QPointer<QDialog> mConfigureDialog;
+    QPointer<QDialog> mCameraControlsDialog;
     QgsMessageBar *mMessageBar = nullptr;
     bool mGpuMemoryLimitReachedReported = false;
 
@@ -235,6 +247,20 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     Qgs3DMapClippingToleranceWidgetSettingsAction *mClippingToleranceAction = nullptr;
 
     QMenu *mToolbarMenu = nullptr;
+
+    struct ElevationProfileData
+    {
+        std::unique_ptr<QgsRubberBand3D> rubberBandZMin;
+        std::unique_ptr<QgsRubberBand3D> rubberBandZMax;
+        std::vector<std::unique_ptr<QgsRubberBand3D>> rubberBandSideLines;
+        std::unique_ptr<QgsRubberBand3D> cursorLineRubberBand;
+        std::unique_ptr<QgsRubberBand3D> cursorPolygonRubberBand;
+        Qgis::GeometryType geomType = Qgis::GeometryType::Line; // used for rubberBandZMin and ZMax
+        double zMin = 0;
+        double zMax = 0;
+    };
+
+    std::unordered_map<QgsElevationProfile *, ElevationProfileData> mElevationProfileData;
 };
 
 class Qgs3DMapClippingToleranceWidgetSettingsAction : public QWidgetAction

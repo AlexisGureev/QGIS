@@ -75,6 +75,32 @@ Qgis.Critical = Qgis.MessageLevel.Critical
 Qgis.Success = Qgis.MessageLevel.Success
 Qgis.NoLevel = Qgis.MessageLevel.NoLevel
 Qgis.MessageLevel.baseClass = Qgis
+QgsMessageOutput.MessageType = Qgis.StringFormat
+# monkey patching scoped based enum
+QgsMessageOutput.MessageText = Qgis.StringFormat.PlainText
+QgsMessageOutput.MessageType.MessageText = Qgis.StringFormat.PlainText
+QgsMessageOutput.MessageText.is_monkey_patched = True
+QgsMessageOutput.MessageText.__doc__ = "Text message"
+QgsMessageOutput.MessageHtml = Qgis.StringFormat.Html
+QgsMessageOutput.MessageType.MessageHtml = Qgis.StringFormat.Html
+QgsMessageOutput.MessageHtml.is_monkey_patched = True
+QgsMessageOutput.MessageHtml.__doc__ = "HTML message"
+Qgis.StringFormat.__doc__ = """Format of log message
+
+.. versionadded:: 4.0.
+
+* ``PlainText``: Text message
+
+  Available as ``QgsMessageOutput.MessageText`` in older QGIS releases.
+
+* ``Html``: HTML message
+
+  Available as ``QgsMessageOutput.MessageHtml`` in older QGIS releases.
+
+
+"""
+# --
+Qgis.StringFormat.baseClass = Qgis
 # monkey patching scoped based enum
 Qgis.NetworkRequestFlag.DisableMessageLogging.__doc__ = "If present, indicates that no message logging should be performed when network errors are encountered"
 Qgis.NetworkRequestFlag.__doc__ = """Flags controlling behavior of network requests.
@@ -743,7 +769,8 @@ Qgis.CaptureTechnique.StraightSegments.__doc__ = "Default capture mode - capture
 Qgis.CaptureTechnique.CircularString.__doc__ = "Capture in circular strings"
 Qgis.CaptureTechnique.Streaming.__doc__ = "Streaming points digitizing mode (points are automatically added as the mouse cursor moves)."
 Qgis.CaptureTechnique.Shape.__doc__ = "Digitize shapes."
-Qgis.CaptureTechnique.NurbsCurve.__doc__ = "Digitizes NURBS curves with control points. \n.. versionadded:: 4.0"
+Qgis.CaptureTechnique.PolyBezier.__doc__ = "Digitizes poly-Bézier curves with anchors and tangent handles (curve passes through anchor points). \n.. versionadded:: 4.0"
+Qgis.CaptureTechnique.NurbsCurve.__doc__ = "Digitizes NURBS curves with control points (curve is attracted to but does not pass through control points). \n.. versionadded:: 4.0"
 Qgis.CaptureTechnique.__doc__ = """Capture technique.
 
 .. versionadded:: 3.26
@@ -752,7 +779,11 @@ Qgis.CaptureTechnique.__doc__ = """Capture technique.
 * ``CircularString``: Capture in circular strings
 * ``Streaming``: Streaming points digitizing mode (points are automatically added as the mouse cursor moves).
 * ``Shape``: Digitize shapes.
-* ``NurbsCurve``: Digitizes NURBS curves with control points.
+* ``PolyBezier``: Digitizes poly-Bézier curves with anchors and tangent handles (curve passes through anchor points).
+
+  .. versionadded:: 4.0
+
+* ``NurbsCurve``: Digitizes NURBS curves with control points (curve is attracted to but does not pass through control points).
 
   .. versionadded:: 4.0
 
@@ -760,17 +791,6 @@ Qgis.CaptureTechnique.__doc__ = """Capture technique.
 """
 # --
 Qgis.CaptureTechnique.baseClass = Qgis
-# monkey patching scoped based enum
-Qgis.NurbsMode.ControlPoints.__doc__ = "Direct control points mode - the curve is attracted to control points but does not pass through them"
-Qgis.NurbsMode.__doc__ = """NURBS digitizing mode.
-
-.. versionadded:: 4.0
-
-* ``ControlPoints``: Direct control points mode - the curve is attracted to control points but does not pass through them
-
-"""
-# --
-Qgis.NurbsMode.baseClass = Qgis
 # monkey patching scoped based enum
 Qgis.VectorLayerTypeFlag.SqlQuery.__doc__ = "SQL query layer"
 Qgis.VectorLayerTypeFlag.__doc__ = """Vector layer type flags.
@@ -1517,6 +1537,22 @@ QgsSymbol.RenderHints = Qgis.SymbolRenderHints
 Qgis.SymbolRenderHints.baseClass = Qgis
 SymbolRenderHints = Qgis  # dirty hack since SIP seems to introduce the flags in module
 # monkey patching scoped based enum
+Qgis.SymbolConverterCapability.ReadSymbol.__doc__ = "Allows reading symbols from variants"
+Qgis.SymbolConverterCapability.WriteSymbol.__doc__ = "Allows writing symbols to variants"
+Qgis.SymbolConverterCapability.__doc__ = """Symbol converter capabilities.
+
+.. versionadded:: 4.2
+
+* ``ReadSymbol``: Allows reading symbols from variants
+* ``WriteSymbol``: Allows writing symbols to variants
+
+"""
+# --
+Qgis.SymbolConverterCapability.baseClass = Qgis
+Qgis.SymbolConverterCapabilities = lambda flags=0: Qgis.SymbolConverterCapability(flags)
+Qgis.SymbolConverterCapabilities.baseClass = Qgis
+SymbolConverterCapabilities = Qgis  # dirty hack since SIP seems to introduce the flags in module
+# monkey patching scoped based enum
 Qgis.SymbolRotationMode.RespectMapRotation.__doc__ = "Entity is rotated along with the map"
 Qgis.SymbolRotationMode.IgnoreMapRotation.__doc__ = "Entity ignores map rotation"
 Qgis.SymbolRotationMode.__doc__ = """Modes for handling how symbol and text entity rotation is handled when maps are rotated.
@@ -1828,6 +1864,20 @@ Qgis.BrowserItemCapabilities = lambda flags=0: Qgis.BrowserItemCapability(flags)
 QgsDataItem.Capabilities = Qgis.BrowserItemCapabilities
 Qgis.BrowserItemCapabilities.baseClass = Qgis
 BrowserItemCapabilities = Qgis  # dirty hack since SIP seems to introduce the flags in module
+# monkey patching scoped based enum
+Qgis.BrowserItemFilterFlag.HideWhenNotFilteringByLayerType.__doc__ = "Item should be hidden from the view when no layer type filter is in place"
+Qgis.BrowserItemFilterFlag.__doc__ = """Browser item filter flags.
+
+.. versionadded:: 4.2
+
+* ``HideWhenNotFilteringByLayerType``: Item should be hidden from the view when no layer type filter is in place
+
+"""
+# --
+Qgis.BrowserItemFilterFlag.baseClass = Qgis
+Qgis.BrowserItemFilterFlags = lambda flags=0: Qgis.BrowserItemFilterFlag(flags)
+Qgis.BrowserItemFilterFlags.baseClass = Qgis
+BrowserItemFilterFlags = Qgis  # dirty hack since SIP seems to introduce the flags in module
 QgsDataProvider.DataCapability = Qgis.DataItemProviderCapability
 # monkey patching scoped based enum
 QgsDataProvider.NoDataCapabilities = Qgis.DataItemProviderCapability.NoCapabilities
@@ -2775,6 +2825,21 @@ Qgis.UriCleaningFlag.baseClass = Qgis
 Qgis.UriCleaningFlags = lambda flags=0: Qgis.UriCleaningFlag(flags)
 Qgis.UriCleaningFlags.baseClass = Qgis
 UriCleaningFlags = Qgis  # dirty hack since SIP seems to introduce the flags in module
+# monkey patching scoped based enum
+Qgis.SourceHierarchyLevel.Connection.__doc__ = "The top-level container, e.g. database connection, catalog (for remote services), or file (for file-based databases)."
+Qgis.SourceHierarchyLevel.Group.__doc__ = "An intermediate logical grouping, e.g. a database schema or layer group."
+Qgis.SourceHierarchyLevel.Object.__doc__ = "Represents a specific data entity, e.g. a table, view, or layer."
+Qgis.SourceHierarchyLevel.__doc__ = """Defines the structural levels within a data source hierarchy.
+
+.. versionadded:: 4.0
+
+* ``Connection``: The top-level container, e.g. database connection, catalog (for remote services), or file (for file-based databases).
+* ``Group``: An intermediate logical grouping, e.g. a database schema or layer group.
+* ``Object``: Represents a specific data entity, e.g. a table, view, or layer.
+
+"""
+# --
+Qgis.SourceHierarchyLevel.baseClass = Qgis
 # monkey patching scoped based enum
 Qgis.SublayerQueryFlag.FastScan.__doc__ = "Indicates that the provider must scan for sublayers using the fastest possible approach -- e.g. by first checking that a uri has an extension which is known to be readable by the provider"
 Qgis.SublayerQueryFlag.ResolveGeometryType.__doc__ = "Attempt to resolve the geometry type for vector sublayers"
@@ -4042,6 +4107,19 @@ Qgis.JoinStyle3D.__doc__ = """Join styles for 3D buffers.
 """
 # --
 Qgis.JoinStyle3D.baseClass = Qgis
+# monkey patching scoped based enum
+Qgis.GeometryBackend.QGIS.__doc__ = "Use internal implementation"
+Qgis.GeometryBackend.GEOS.__doc__ = "Use GEOS implementation"
+Qgis.GeometryBackend.__doc__ = """Geometry backend for :py:class:`QgsGeometry`.
+
+.. versionadded:: 4.2
+
+* ``QGIS``: Use internal implementation
+* ``GEOS``: Use GEOS implementation
+
+"""
+# --
+Qgis.GeometryBackend.baseClass = Qgis
 # monkey patching scoped based enum
 Qgis.GeosCreationFlag.RejectOnInvalidSubGeometry.__doc__ = "Don't allow geometries with invalid sub-geometries to be created"
 Qgis.GeosCreationFlag.SkipEmptyInteriorRings.__doc__ = "Skip any empty polygon interior ring"
@@ -7658,6 +7736,36 @@ Qgis.Point3DShape.__doc__ = """3D point shape types.
 # --
 Qgis.Point3DShape.baseClass = Qgis
 # monkey patching scoped based enum
+Qgis.MaterialRenderingTechnique.Triangles.__doc__ = "Triangle based rendering (default)"
+Qgis.MaterialRenderingTechnique.Lines.__doc__ = "Line based rendering, requires line data"
+Qgis.MaterialRenderingTechnique.InstancedPoints.__doc__ = "Instanced based rendering, requiring triangles and point data"
+Qgis.MaterialRenderingTechnique.Points.__doc__ = "Point based rendering, requires point data"
+Qgis.MaterialRenderingTechnique.TrianglesWithFixedTexture.__doc__ = "Triangle based rendering, using a fixed, non-user-configurable texture (e.g. for terrain rendering)"
+Qgis.MaterialRenderingTechnique.TrianglesFromModel.__doc__ = "Triangle based rendering, using a model object source"
+Qgis.MaterialRenderingTechnique.TrianglesDataDefined.__doc__ = "Triangle based rendering with possibility of datadefined color"
+Qgis.MaterialRenderingTechnique.Billboards.__doc__ = "Flat billboard rendering"
+Qgis.MaterialRenderingTechnique.__doc__ = """Material rendering techniques.
+
+.. warning::
+
+   This is not considered stable API, and may change in future QGIS releases. It is
+   exposed to the Python bindings as a tech preview only.
+
+.. versionadded:: 4.2
+
+* ``Triangles``: Triangle based rendering (default)
+* ``Lines``: Line based rendering, requires line data
+* ``InstancedPoints``: Instanced based rendering, requiring triangles and point data
+* ``Points``: Point based rendering, requires point data
+* ``TrianglesWithFixedTexture``: Triangle based rendering, using a fixed, non-user-configurable texture (e.g. for terrain rendering)
+* ``TrianglesFromModel``: Triangle based rendering, using a model object source
+* ``TrianglesDataDefined``: Triangle based rendering with possibility of datadefined color
+* ``Billboards``: Flat billboard rendering
+
+"""
+# --
+Qgis.MaterialRenderingTechnique.baseClass = Qgis
+# monkey patching scoped based enum
 Qgis.LightSourceType.Point.__doc__ = "Point light source"
 Qgis.LightSourceType.Directional.__doc__ = "Directional light source"
 Qgis.LightSourceType.__doc__ = """Light source types for 3D scenes.
@@ -8058,6 +8166,31 @@ Qgis.ArcGisRestServiceType.__doc__ = """Available ArcGIS REST service types.
 """
 # --
 Qgis.ArcGisRestServiceType.baseClass = Qgis
+# monkey patching scoped based enum
+Qgis.ArcGisRestServiceCapability.Map.__doc__ = "Render map"
+Qgis.ArcGisRestServiceCapability.Query.__doc__ = "Query features"
+Qgis.ArcGisRestServiceCapability.Update.__doc__ = "Update features"
+Qgis.ArcGisRestServiceCapability.Delete.__doc__ = "Delete features"
+Qgis.ArcGisRestServiceCapability.Create.__doc__ = "Create features"
+Qgis.ArcGisRestServiceCapability.__doc__ = """Available ArcGIS REST service capabilities.
+
+This enum contains a subset of the capabilities returned by ArcGIS REST services. May be
+extended in future with additional capabilities when required.
+
+.. versionadded:: 4.2
+
+* ``Map``: Render map
+* ``Query``: Query features
+* ``Update``: Update features
+* ``Delete``: Delete features
+* ``Create``: Create features
+
+"""
+# --
+Qgis.ArcGisRestServiceCapability.baseClass = Qgis
+Qgis.ArcGisRestServiceCapabilities = lambda flags=0: Qgis.ArcGisRestServiceCapability(flags)
+Qgis.ArcGisRestServiceCapabilities.baseClass = Qgis
+ArcGisRestServiceCapabilities = Qgis  # dirty hack since SIP seems to introduce the flags in module
 QgsRelation.RelationType = Qgis.RelationshipType
 # monkey patching scoped based enum
 QgsRelation.Normal = Qgis.RelationshipType.Normal

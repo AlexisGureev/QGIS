@@ -919,7 +919,7 @@ used to build dependency package.
 
 Download the latest QGIS-Deps install script, qt package and QGIS-Deps packages from
 
-https://download.qgis.org/downloads/macos/deps
+https://qgis.org/downloads-list/#macos/deps
 
 You should have one bash script and two tar archive in your download folder.
 Run the install script to install Qt and QGIS-Deps to `/opt/` area. You need
@@ -1034,7 +1034,8 @@ Install and initialize vcpkg
 Install build tools using [homebrew](https://brew.sh/)
 
 ```sh
-brew install git cmake flex bison automake autoconf autoconf-archive libtool nasm ninja
+brew install git cmake flex bison automake autoconf autoconf-archive libtool nasm ninja \
+             pkg-config gcc swig
 ```
 
 Get the QGIS source code
@@ -1055,8 +1056,8 @@ If that is not the case (e.g. you build for x64 on a arm64 machine), adjust
 the `HOST_TRIPLET` in the next step.
 
 ```sh
-TRIPLET=arm64-osx-dynamic-release
-# TRIPLET=x64-osx-dynamic-release
+export TRIPLET=arm64-osx-dynamic-release
+# export TRIPLET=x64-osx-dynamic-release
 ```
 
 Configure
@@ -1067,14 +1068,22 @@ cmake -S . \
       -B build \
       -D WITH_VCPKG=ON \
       -D WITH_BINDINGS=ON \
+      -D WITH_QTWEBENGINE=OFF \
       -D VCPKG_TARGET_TRIPLET="$TRIPLET" \
       -D VCPKG_HOST_TRIPLET="$TRIPLET"
 ```
 
-Build (switch the target to `Release` if you do not want to debug)
+Build (switch the config to `Release` if you do not want to debug)
 
 ```sh
-cmake --build build --target RelWithDebInfo
+cmake --build build --config RelWithDebInfo
+```
+
+Run
+
+```sh
+export PYTHONHOME=$(pwd)/build/vcpkg_installed/$TRIPLET
+./build/output/Contents/MacOS/qgis
 ```
 
 # 6. Setting up the WCS test server on GNU/Linux
@@ -1372,3 +1381,5 @@ The following people have contributed to this document:
 
 * MXE/Mingw64 section
   * Alessandro Pasotti (2018-2021)
+
+NOTE:  The Windows build instructions may change over time. Please refer to the latest `ms-windows/mingw` folder for current build scripts.

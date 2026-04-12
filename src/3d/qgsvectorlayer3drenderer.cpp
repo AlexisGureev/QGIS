@@ -28,8 +28,7 @@ using namespace Qt::StringLiterals;
 
 QgsVectorLayer3DRendererMetadata::QgsVectorLayer3DRendererMetadata()
   : Qgs3DRendererAbstractMetadata( u"vector"_s )
-{
-}
+{}
 
 QgsAbstract3DRenderer *QgsVectorLayer3DRendererMetadata::createRenderer( QDomElement &elem, const QgsReadWriteContext &context )
 {
@@ -44,8 +43,7 @@ QgsAbstract3DRenderer *QgsVectorLayer3DRendererMetadata::createRenderer( QDomEle
 
 QgsVectorLayer3DRenderer::QgsVectorLayer3DRenderer( QgsAbstract3DSymbol *s )
   : mSymbol( s )
-{
-}
+{}
 
 QgsVectorLayer3DRenderer *QgsVectorLayer3DRenderer::clone() const
 {
@@ -71,14 +69,7 @@ Qt3DCore::QEntity *QgsVectorLayer3DRenderer::createEntity( Qgs3DMapSettings *map
   if ( !mSymbol || !vl )
     return nullptr;
 
-  // we start with a maximal z range because we can't know this upfront. There's too many
-  // factors to consider eg vertex z data, terrain heights, data defined offsets and extrusion heights,...
-  // This range will be refined after populating the nodes to the actual z range of the generated chunks nodes.
-  // Assuming the vertical height is in meter, then it's extremely unlikely that a real vertical
-  // height will exceed this amount!
-  constexpr double MINIMUM_VECTOR_Z_ESTIMATE = -100000;
-  constexpr double MAXIMUM_VECTOR_Z_ESTIMATE = 100000;
-  return new QgsVectorLayerChunkedEntity( map, vl, MINIMUM_VECTOR_Z_ESTIMATE, MAXIMUM_VECTOR_Z_ESTIMATE, tilingSettings(), mSymbol.get() );
+  return new QgsVectorLayerChunkedEntity( map, vl, Qgs3DUtils::MINIMUM_VECTOR_Z_ESTIMATE, Qgs3DUtils::MAXIMUM_VECTOR_Z_ESTIMATE, tilingSettings(), mSymbol.get() );
 }
 
 void QgsVectorLayer3DRenderer::writeXml( QDomElement &elem, const QgsReadWriteContext &context ) const

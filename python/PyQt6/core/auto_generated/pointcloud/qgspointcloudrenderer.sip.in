@@ -25,9 +25,7 @@ operation.
 #include "qgspointcloudrenderer.h"
 %End
   public:
-
-    QgsPointCloudRenderContext( QgsRenderContext &context, const QgsVector3D &scale, const QgsVector3D &offset,
-                                double zValueScale, double zValueFixedOffset, QgsFeedback *feedback = 0 );
+    QgsPointCloudRenderContext( QgsRenderContext &context, const QgsVector3D &scale, const QgsVector3D &offset, double zValueScale, double zValueFixedOffset, QgsFeedback *feedback = 0 );
 %Docstring
 Constructor for QgsPointCloudRenderContext.
 
@@ -647,8 +645,25 @@ Returns the overview switching scale
 .. versionadded:: 4.0
 %End
 
-  protected:
+    QgsElevationShadingRenderer elevationShadingRenderer() const;
+%Docstring
+Returns the shading renderer used to render shading on the layer.
 
+.. seealso:: :py:func:`setElevationShadingRenderer`
+
+.. versionadded:: 4.2
+%End
+
+    void setElevationShadingRenderer( const QgsElevationShadingRenderer &renderer );
+%Docstring
+Sets the shading ``renderer`` used to render shading on the layer.
+
+.. seealso:: :py:func:`elevationShadingRenderer`
+
+.. versionadded:: 4.2
+%End
+
+  protected:
     static void pointXY( QgsPointCloudRenderContext &context, const char *ptr, int i, double &x, double &y );
 %Docstring
 Retrieves the x and y coordinate for the point at index ``i``.

@@ -18,6 +18,7 @@
 #include "qgisapp.h"
 #include "qgs3danimationsettings.h"
 #include "qgs3danimationwidget.h"
+#include "qgs3dcameracontrolswidget.h"
 #include "qgs3ddebugwidget.h"
 #include "qgs3dmapcanvas.h"
 #include "qgs3dmapconfigwidget.h"
@@ -35,11 +36,15 @@
 #include "qgsapplication.h"
 #include "qgscameracontroller.h"
 #include "qgscrosssection.h"
+#include "qgscurve.h"
 #include "qgsdockablewidgethelper.h"
+#include "qgselevationprofile.h"
 #include "qgsflatterrainsettings.h"
+#include "qgsframegraph.h"
 #include "qgsgui.h"
 #include "qgshelp.h"
 #include "qgsidentifyresultsdialog.h"
+#include "qgslinestring.h"
 #include "qgsmap3dexportwidget.h"
 #include "qgsmapcanvas.h"
 #include "qgsmapthemecollection.h"
@@ -50,10 +55,14 @@
 #include "qgspointcloudlayer.h"
 #include "qgspointcloudlayer3drenderer.h"
 #include "qgspointcloudquerybuilder.h"
+#include "qgspolygon.h"
+#include "qgsprofilepoint.h"
 #include "qgsrubberband.h"
+#include "qgsrubberband3d.h"
 #include "qgssettings.h"
 #include "qgssettingstree.h"
 #include "qgsshortcutsmanager.h"
+#include "qgswindow3dengine.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -67,8 +76,10 @@
 
 using namespace Qt::StringLiterals;
 
-const QgsSettingsEntryDouble *Qgs3DMapCanvasWidget::settingClippingTolerance = new QgsSettingsEntryDouble( u"tolerance"_s, QgsSettingsTree::sTree3DMap, 100, u"Tolerance distance for 3D Map cross section"_s, Qgis::SettingsOptions(), 0 );
-const QgsSettingsEntryBool *Qgs3DMapCanvasWidget::settingCrossSectionToleranceLocked = new QgsSettingsEntryBool( u"cross-section-tolerance-locked"_s, QgsSettingsTree::sTree3DMap, true, u"Whether cross section tolerance is locked"_s );
+const QgsSettingsEntryDouble *Qgs3DMapCanvasWidget::settingClippingTolerance
+  = new QgsSettingsEntryDouble( u"tolerance"_s, QgsSettingsTree::sTree3DMap, 100, u"Tolerance distance for 3D Map cross section"_s, Qgis::SettingsOptions(), 0 );
+const QgsSettingsEntryBool *Qgs3DMapCanvasWidget::settingCrossSectionToleranceLocked
+  = new QgsSettingsEntryBool( u"cross-section-tolerance-locked"_s, QgsSettingsTree::sTree3DMap, true, u"Whether cross section tolerance is locked"_s );
 
 
 Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
@@ -125,15 +136,21 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   mEditingToolBar->addAction( mEditingToolsAction );
   QToolButton *editingToolsButton = qobject_cast<QToolButton *>( mEditingToolBar->widgetForAction( mEditingToolsAction ) );
   editingToolsButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
-  QAction *actionPointCloudChangeAttributeTool = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"mActionSelectPolygon.svg"_s ) ), tr( "Select by Polygon" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByPolygon );
-  QAction *actionPaintbrush = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"propertyicons/rendering.svg"_s ) ), tr( "Select by Paintbrush" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByPaintbrush );
-  QAction *actionAboveLineTool = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"mActionSelectAboveLine.svg"_s ) ), tr( "Select Above Line" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByAboveLine );
-  QAction *actionBelowLineTool = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"mActionSelectBelowLine.svg"_s ) ), tr( "Select Below Line" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByBelowLine );
+  QAction *actionPointCloudChangeAttributeTool
+    = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"mActionSelectPolygon.svg"_s ) ), tr( "Select by Polygon" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByPolygon );
+  QAction *actionPaintbrush
+    = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"propertyicons/rendering.svg"_s ) ), tr( "Select by Paintbrush" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByPaintbrush );
+  QAction *actionAboveLineTool
+    = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"mActionSelectAboveLine.svg"_s ) ), tr( "Select Above Line" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByAboveLine );
+  QAction *actionBelowLineTool
+    = mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( u"mActionSelectBelowLine.svg"_s ) ), tr( "Select Below Line" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributeByBelowLine );
 
   mEditingToolBar->addWidget( mPointCloudEditingToolbar );
-  QAction *actionPointFilter = mPointCloudEditingToolbar->addAction( QIcon( QgsApplication::iconPath( "mIconExpressionFilter.svg" ) ), tr( "Filter Points" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributePointFilter );
+  QAction *actionPointFilter
+    = mPointCloudEditingToolbar->addAction( QIcon( QgsApplication::iconPath( "mIconExpressionFilter.svg" ) ), tr( "Filter Points" ), this, &Qgs3DMapCanvasWidget::changePointCloudAttributePointFilter );
   actionPointFilter->setCheckable( true );
-  const QString tooltip = u"%1\n\n%2\n%3"_s.arg( tr( "Filter Points" ), tr( "Set an expression to filter points that should be edited." ), tr( "Points that do not satisfy the expression will not be modified." ) );
+  const QString tooltip
+    = u"%1\n\n%2\n%3"_s.arg( tr( "Filter Points" ), tr( "Set an expression to filter points that should be edited." ), tr( "Points that do not satisfy the expression will not be modified." ) );
   actionPointFilter->setToolTip( tooltip );
 
   mPointCloudEditingToolbar->addWidget( new QLabel( tr( "Attribute" ) ) );
@@ -151,9 +168,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   QAction *actionEditingToolbar = toolBar->addAction( QIcon( QgsApplication::iconPath( "mIconPointCloudLayer.svg" ) ), tr( "Show Editing Toolbar" ) );
   actionEditingToolbar->setCheckable( true );
-  actionEditingToolbar->setChecked(
-    setting.value( u"/3D/editingToolbar/visibility"_s, false, QgsSettings::Gui ).toBool()
-  );
+  actionEditingToolbar->setChecked( setting.value( u"/3D/editingToolbar/visibility"_s, false, QgsSettings::Gui ).toBool() );
   connect( actionEditingToolbar, &QAction::toggled, this, &Qgs3DMapCanvasWidget::toggleEditingToolbar );
   connect( mCboChangeAttribute, qOverload<int>( &QComboBox::currentIndexChanged ), this, [this]( int ) { onPointCloudChangeAttributeSettingsChanged(); } );
   connect( mCboChangeAttributeValue, qOverload<const QString &>( &QComboBox::currentTextChanged ), this, [this]( const QString &text ) {
@@ -174,15 +189,10 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   } );
   connect( mSpinChangeAttributeValue, qOverload<double>( &QgsDoubleSpinBox::valueChanged ), this, [this]( double ) { mMapToolChangeAttribute->setNewValue( mSpinChangeAttributeValue->value() ); } );
 
-  QAction *toggleOnScreenNavigation = toolBar->addAction(
-    QgsApplication::getThemeIcon( u"mAction3DNavigation.svg"_s ),
-    tr( "Toggle On-Screen Navigation" )
-  );
+  QAction *toggleOnScreenNavigation = toolBar->addAction( QgsApplication::getThemeIcon( u"mAction3DNavigation.svg"_s ), tr( "Toggle On-Screen Navigation" ) );
 
   toggleOnScreenNavigation->setCheckable( true );
-  toggleOnScreenNavigation->setChecked(
-    setting.value( u"/3D/navigationWidget/visibility"_s, true, QgsSettings::Gui ).toBool()
-  );
+  toggleOnScreenNavigation->setChecked( setting.value( u"/3D/navigationWidget/visibility"_s, true, QgsSettings::Gui ).toBool() );
   QObject::connect( toggleOnScreenNavigation, &QAction::toggled, this, &Qgs3DMapCanvasWidget::toggleNavigationWidget );
 
   toolBar->addSeparator();
@@ -266,16 +276,12 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   mShowFrustumPolygon = new QAction( tr( "Show Visible Camera Area in 2D Map View" ), this );
   mShowFrustumPolygon->setCheckable( true );
-  connect( mShowFrustumPolygon, &QAction::triggered, this, [this]( bool enabled ) {
-    mCanvas->mapSettings()->setViewFrustumVisualizationEnabled( enabled );
-  } );
+  connect( mShowFrustumPolygon, &QAction::triggered, this, [this]( bool enabled ) { mCanvas->mapSettings()->setViewFrustumVisualizationEnabled( enabled ); } );
   mCameraMenu->addAction( mShowFrustumPolygon );
 
   mActionShow2DMapOverlay = new QAction( tr( "Show 2D Map Overlay" ), this );
   mActionShow2DMapOverlay->setCheckable( true );
-  connect( mActionShow2DMapOverlay, &QAction::triggered, this, [this]( bool enabled ) {
-    mCanvas->mapSettings()->setIs2DMapOverlayEnabled( enabled );
-  } );
+  connect( mActionShow2DMapOverlay, &QAction::triggered, this, [this]( bool enabled ) { mCanvas->mapSettings()->setIs2DMapOverlayEnabled( enabled ); } );
   mCameraMenu->addAction( mActionShow2DMapOverlay );
 
   mActionSetSceneExtent = mCameraMenu->addAction( QgsApplication::getThemeIcon( u"extents.svg"_s ), tr( "Set 3D Scene Extent on 2D Map View" ), this, &Qgs3DMapCanvasWidget::setSceneExtentOn2DCanvas );
@@ -287,6 +293,10 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   };
   createShortcuts( u"m3DSetSceneExtent"_s, &Qgs3DMapCanvasWidget::setSceneExtentOn2DCanvas );
 
+  mActionOpenCameraControlsWidget = new QAction( QgsApplication::getThemeIcon( u"/mIconCamera.svg"_s ), tr( "Camera controls" ), this );
+  connect( mActionOpenCameraControlsWidget, &QAction::triggered, this, &Qgs3DMapCanvasWidget::configureCamera );
+  mCameraMenu->addAction( mActionOpenCameraControlsWidget );
+
   mCrossSectionMenu = new QMenu( this );
   mActionCrossSection = new QAction( QgsApplication::getThemeIcon( u"mActionEditCut.svg"_s ), tr( "Cross Section" ), this );
   mActionCrossSection->setMenu( mCrossSectionMenu );
@@ -297,8 +307,6 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   mActionSetClippingPlanes = mCrossSectionMenu->addAction( QgsApplication::getThemeIcon( u"mActionEditCut.svg"_s ), tr( "Cross Section Tool" ), this, &Qgs3DMapCanvasWidget::setClippingPlanesOn2DCanvas );
   mActionSetClippingPlanes->setCheckable( true );
-  mActionDisableClippingPlanes = mCrossSectionMenu->addAction( QgsApplication::getThemeIcon( u"mActionEditCutDisabled.svg"_s ), tr( "Disable Cross Section" ), this, &Qgs3DMapCanvasWidget::disableCrossSection );
-  mActionDisableClippingPlanes->setDisabled( true );
 
   mClippingToleranceAction = new Qgs3DMapClippingToleranceWidgetSettingsAction( mCrossSectionMenu );
   connect( mClippingToleranceAction->toleranceSpinBox(), qOverload<double>( &QDoubleSpinBox::valueChanged ), this, [this]( double value ) {
@@ -327,6 +335,11 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   mCrossSectionMenu->addAction( mActionNudgeLeft );
   mCrossSectionMenu->addAction( mActionNudgeRight );
 
+  mCrossSectionMenu->addSeparator();
+  mActionDisableClippingPlanes
+    = mCrossSectionMenu->addAction( QgsApplication::getThemeIcon( u"mActionEditCutDisabled.svg"_s ), tr( "Disable Cross Section" ), this, &Qgs3DMapCanvasWidget::disableCrossSection );
+  mActionDisableClippingPlanes->setDisabled( true );
+
   // Effects Menu
   mEffectsMenu = new QMenu( this );
 
@@ -347,9 +360,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   mActionEnableEyeDome = new QAction( tr( "Show Eye Dome Lighting" ), this );
   mActionEnableEyeDome->setCheckable( true );
-  connect( mActionEnableEyeDome, &QAction::triggered, this, [this]( bool enabled ) {
-    mCanvas->mapSettings()->setEyeDomeLightingEnabled( enabled );
-  } );
+  connect( mActionEnableEyeDome, &QAction::triggered, this, [this]( bool enabled ) { mCanvas->mapSettings()->setEyeDomeLightingEnabled( enabled ); } );
   mEffectsMenu->addAction( mActionEnableEyeDome );
 
   mActionEnableAmbientOcclusion = new QAction( tr( "Show Ambient Occlusion" ), this );
@@ -370,7 +381,9 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   mCanvas->setMinimumSize( QSize( 200, 200 ) );
 
   connect( mCanvas, &Qgs3DMapCanvas::savedAsImage, this, []( const QString &fileName ) {
-    QgisApp::instance()->messageBar()->pushSuccess( tr( "Save as Image" ), tr( "Successfully saved the 3D map to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fileName ).toString(), QDir::toNativeSeparators( fileName ) ) );
+    QgisApp::instance()
+      ->messageBar()
+      ->pushSuccess( tr( "Save as Image" ), tr( "Successfully saved the 3D map to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fileName ).toString(), QDir::toNativeSeparators( fileName ) ) );
   } );
 
   connect( mCanvas, &Qgs3DMapCanvas::fpsCountChanged, this, &Qgs3DMapCanvasWidget::updateFpsCount );
@@ -445,9 +458,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   connect( debugPanelShortCut, &QShortcut::activated, this, qOverload<>( &Qgs3DMapCanvasWidget::toggleDebugWidget ) );
   debugPanelShortCut->setObjectName( u"DebugPanel"_s );
   debugPanelShortCut->setWhatsThis( tr( "Debug panel visibility" ) );
-  toggleNavigationWidget(
-    setting.value( u"/3D/navigationWidget/visibility"_s, false, QgsSettings::Gui ).toBool()
-  );
+  toggleNavigationWidget( setting.value( u"/3D/navigationWidget/visibility"_s, false, QgsSettings::Gui ).toBool() );
 
   layout->addLayout( hLayout );
   layout->addWidget( mAnimationWidget );
@@ -456,7 +467,8 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   onTotalPendingJobsCountChanged();
 
-  mDockableWidgetHelper = new QgsDockableWidgetHelper( mCanvasName, this, QgisApp::instance(), mCanvasName, QStringList(), isDocked ? QgsDockableWidgetHelper::OpeningMode::ForceDocked : QgsDockableWidgetHelper::OpeningMode::RespectSetting );
+  mDockableWidgetHelper
+    = new QgsDockableWidgetHelper( mCanvasName, this, QgisApp::instance(), mCanvasName, QStringList(), isDocked ? QgsDockableWidgetHelper::OpeningMode::ForceDocked : QgsDockableWidgetHelper::OpeningMode::RespectSetting );
 
   if ( QDialog *dialog = mDockableWidgetHelper->dialog() )
   {
@@ -466,12 +478,8 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   }
   QAction *dockAction = mDockableWidgetHelper->createDockUndockAction( tr( "Dock 3D Map View" ), this );
   toolBar->addAction( dockAction );
-  connect( mDockableWidgetHelper, &QgsDockableWidgetHelper::closed, this, [this]() {
-    QgisApp::instance()->close3DMapView( canvasName() );
-  } );
-  connect( dockAction, &QAction::toggled, this, [toolBar]( const bool isSmallSize ) {
-    toolBar->setIconSize( QgisApp::instance()->iconSize( isSmallSize ) );
-  } );
+  connect( mDockableWidgetHelper, &QgsDockableWidgetHelper::closed, this, [this]() { QgisApp::instance()->close3DMapView( canvasName() ); } );
+  connect( dockAction, &QAction::toggled, this, [toolBar]( const bool isSmallSize ) { toolBar->setIconSize( QgisApp::instance()->iconSize( isSmallSize ) ); } );
 
   updateLayerRelatedActions( QgisApp::instance()->activeLayer() );
   mEditingToolBar->setVisible( setting.value( u"/3D/editingToolbar/visibility"_s, false, QgsSettings::Gui ).toBool() );
@@ -485,9 +493,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   }
 
   // sort actions in toolbar menu
-  std::sort( toolbarMenuActions.begin(), toolbarMenuActions.end(), []( QAction *a, QAction *b ) {
-    return QString::localeAwareCompare( a->text(), b->text() ) < 0;
-  } );
+  std::sort( toolbarMenuActions.begin(), toolbarMenuActions.end(), []( QAction *a, QAction *b ) { return QString::localeAwareCompare( a->text(), b->text() ) < 0; } );
 
   mToolbarMenu->addActions( toolbarMenuActions );
 
@@ -627,7 +633,8 @@ void Qgs3DMapCanvasWidget::changePointCloudAttributePointFilter()
     mMapToolChangeAttribute->setPointFilter( mChangeAttributePointFilter );
   }
   action->setChecked( !mChangeAttributePointFilter.isEmpty() );
-  QString tooltip = u"%1\n\n%2\n%3"_s.arg( tr( "Filter Points" ), tr( "Set an expression to filter points that should be edited." ), tr( "Points that do not satisfy the expression will not be modified." ) );
+  QString tooltip
+    = u"%1\n\n%2\n%3"_s.arg( tr( "Filter Points" ), tr( "Set an expression to filter points that should be edited." ), tr( "Points that do not satisfy the expression will not be modified." ) );
   if ( !mChangeAttributePointFilter.isEmpty() )
     tooltip.append( u"\n%1\n%2"_s.arg( tr( "Current filter expression: " ), mChangeAttributePointFilter ) );
   action->setToolTip( tooltip );
@@ -765,7 +772,9 @@ void Qgs3DMapCanvasWidget::setMapSettings( Qgs3DMapSettings *map )
   mAnimationWidget->setMap( map );
 
   // Disable button for switching the map theme if the terrain generator is a mesh, or if there is no terrain
-  mActionMapThemes->setDisabled( !mCanvas->mapSettings()->terrainRenderingEnabled() || !mCanvas->mapSettings()->terrainGenerator() || mCanvas->mapSettings()->terrainGenerator()->type() == QgsTerrainGenerator::Mesh );
+  mActionMapThemes->setDisabled(
+    !mCanvas->mapSettings()->terrainRenderingEnabled() || !mCanvas->mapSettings()->terrainGenerator() || mCanvas->mapSettings()->terrainGenerator()->type() == QgsTerrainGenerator::Mesh
+  );
   mLabelFpsCounter->setVisible( map->isFpsCounterEnabled() );
 
   mMapToolClippingPlanes = std::make_unique<QgsMapToolClippingPlanes>( mMainCanvas, this );
@@ -817,6 +826,30 @@ void Qgs3DMapCanvasWidget::resetView()
   mCanvas->resetView();
 }
 
+void Qgs3DMapCanvasWidget::configureCamera()
+{
+  if ( mCameraControlsDialog )
+  {
+    mCameraControlsDialog->raise();
+    return;
+  }
+
+  mCameraControlsDialog = new QDialog( this );
+  mCameraControlsDialog->setAttribute( Qt::WA_DeleteOnClose );
+  mCameraControlsDialog->setWindowTitle( tr( "Camera controls" ) );
+  mCameraControlsDialog->setObjectName( u"3DCameraControlsDialog"_s );
+  mCameraControlsDialog->setMinimumSize( 300, 200 );
+  QgsGui::enableAutoGeometryRestore( mCameraControlsDialog );
+
+  Qgs3DCameraControlsWidget *w = new Qgs3DCameraControlsWidget( mCanvas, mCameraControlsDialog );
+  connect( mCanvas->cameraController(), &QgsCameraController::cameraChanged, w, &Qgs3DCameraControlsWidget::updateFromCamera );
+
+  QVBoxLayout *layout = new QVBoxLayout( mCameraControlsDialog );
+  layout->addWidget( w );
+
+  mCameraControlsDialog->show();
+}
+
 void Qgs3DMapCanvasWidget::configure()
 {
   if ( mConfigureDialog )
@@ -845,11 +878,7 @@ void Qgs3DMapCanvasWidget::configure()
     // update map
     w->apply();
 
-    const QgsVector3D p = Qgs3DUtils::transformWorldCoordinates(
-      oldLookingAt,
-      oldOrigin, oldCrs,
-      map->origin(), map->crs(), QgsProject::instance()->transformContext()
-    );
+    const QgsVector3D p = Qgs3DUtils::transformWorldCoordinates( oldLookingAt, oldOrigin, oldCrs, map->origin(), map->crs(), QgsProject::instance()->transformContext() );
 
     if ( p != oldLookingAt )
     {
@@ -912,11 +941,13 @@ void Qgs3DMapCanvasWidget::exportScene()
     const QString exportFilePath = QDir( exportSettings.sceneFolderPath() ).filePath( exportSettings.sceneName() + u".obj"_s );
     if ( success )
     {
-      mMessageBar->pushMessage( tr( "Export 3D scene" ), tr( "Successfully exported scene to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( exportFilePath ).toString(), QDir::toNativeSeparators( exportFilePath ) ), Qgis::MessageLevel::Success, 0 );
+      mMessageBar
+        ->pushMessage( tr( "Export 3D scene" ), tr( "Successfully exported scene to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( exportFilePath ).toString(), QDir::toNativeSeparators( exportFilePath ) ), Qgis::MessageLevel::Success, 0 );
     }
     else
     {
-      mMessageBar->pushMessage( tr( "Export 3D scene" ), tr( "Unable to export scene to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( exportFilePath ).toString(), QDir::toNativeSeparators( exportFilePath ) ), Qgis::MessageLevel::Warning, 0 );
+      mMessageBar
+        ->pushMessage( tr( "Export 3D scene" ), tr( "Unable to export scene to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( exportFilePath ).toString(), QDir::toNativeSeparators( exportFilePath ) ), Qgis::MessageLevel::Warning, 0 );
     }
   }
 }
@@ -968,9 +999,7 @@ void Qgs3DMapCanvasWidget::mapThemeMenuAboutToShow()
   {
     actionFollowMain->setChecked( true );
   }
-  connect( actionFollowMain, &QAction::triggered, this, [this] {
-    mCanvas->mapSettings()->setTerrainMapTheme( QString() );
-  } );
+  connect( actionFollowMain, &QAction::triggered, this, [this] { mCanvas->mapSettings()->setTerrainMapTheme( QString() ); } );
   mMapThemeMenuPresetActions.append( actionFollowMain );
 
   const auto constMapThemes = QgsProject::instance()->mapThemeCollection()->mapThemes();
@@ -982,9 +1011,7 @@ void Qgs3DMapCanvasWidget::mapThemeMenuAboutToShow()
     {
       a->setChecked( true );
     }
-    connect( a, &QAction::triggered, this, [a, this] {
-      mCanvas->mapSettings()->setTerrainMapTheme( a->text() );
-    } );
+    connect( a, &QAction::triggered, this, [a, this] { mCanvas->mapSettings()->setTerrainMapTheme( a->text() ); } );
     mMapThemeMenuPresetActions.append( a );
   }
   mMapThemeMenu->addActions( mMapThemeMenuPresetActions );
@@ -1069,10 +1096,14 @@ void Qgs3DMapCanvasWidget::onGpuMemoryLimitReached()
 
   const QgsSettings settings;
   double memLimit = settings.value( u"map3d/gpuMemoryLimit"_s, 500.0, QgsSettings::App ).toDouble();
-  mMessageBar->pushMessage( tr( "A map layer has used all graphics memory allowed (%1 MB). "
-                                "You may want to lower the amount of detail in the scene, or increase the limit in the options." )
-                              .arg( memLimit ),
-                            Qgis::MessageLevel::Warning );
+  mMessageBar->pushMessage(
+    tr(
+      "A map layer has used all graphics memory allowed (%1 MB). "
+      "You may want to lower the amount of detail in the scene, or increase the limit in the options."
+    )
+      .arg( memLimit ),
+    Qgis::MessageLevel::Warning
+  );
   mGpuMemoryLimitReachedReported = true;
 }
 
@@ -1095,7 +1126,12 @@ void Qgs3DMapCanvasWidget::onPointCloudChangeAttributeSettingsChanged()
     mSpinChangeAttributeValue->setMaximum( 15 );
     mSpinChangeAttributeValue->setDecimals( 0 );
   }
-  else if ( attributeName == "Synthetic"_L1 || attributeName == "KeyPoint"_L1 || attributeName == "Withheld"_L1 || attributeName == "Overlap"_L1 || attributeName == "ScanDirectionFlag"_L1 || attributeName == "EdgeOfFlightLine"_L1 )
+  else if ( attributeName == "Synthetic"_L1
+            || attributeName == "KeyPoint"_L1
+            || attributeName == "Withheld"_L1
+            || attributeName == "Overlap"_L1
+            || attributeName == "ScanDirectionFlag"_L1
+            || attributeName == "EdgeOfFlightLine"_L1 )
   {
     useComboBox = true;
     const int oldIndex = mCboChangeAttributeValue->currentIndex();
@@ -1382,6 +1418,295 @@ void Qgs3DMapCanvasWidget::updateCheckedActionsFromMapSettings( const Qgs3DMapSe
   whileBlocking( mActionShow2DMapOverlay )->setChecked( mapSettings->is2DMapOverlayEnabled() );
 }
 
+void Qgs3DMapCanvasWidget::updateProfileCursorPosition( QgsElevationProfile *profile, const QgsPointXY &mapPoint, const QgsProfilePoint &profilePoint )
+{
+  if ( !mCanvas || !mElevationProfileData.contains( profile ) )
+    return;
+
+  ElevationProfileData &data = mElevationProfileData[profile];
+
+  QgsCurve *curve = profile->profileCurve();
+  if ( mapPoint.isEmpty() || profilePoint.isEmpty() || !curve )
+  {
+    data.cursorLineRubberBand.reset();
+    data.cursorPolygonRubberBand.reset();
+    return;
+  }
+
+  if ( !data.cursorLineRubberBand )
+  {
+    data.cursorLineRubberBand = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity(), Qgis::GeometryType::Line );
+    data.cursorLineRubberBand->setColor( QColor( 0, 0, 0, 200 ) );
+    data.cursorLineRubberBand->setWidth( 3 );
+    data.cursorLineRubberBand->setMarkersEnabled( false );
+  }
+
+  QgsGeometry cursorGeom( new QgsLineString(
+    QVector<QgsPoint> {
+      QgsPoint( mapPoint.x(), mapPoint.y(), data.zMin ),
+      QgsPoint( mapPoint.x(), mapPoint.y(), data.zMax ),
+    }
+  ) );
+  data.cursorLineRubberBand->setGeometry( cursorGeom );
+
+  // we need to properly rotate the curve depending on where it is
+  const double curveLength = curve->length();
+  const double offset = std::min( 0.1, curveLength * 0.001 );
+  const double profilePointDistance = profilePoint.distance();
+
+  const double d0 = std::max( 0.0, profilePointDistance - offset );
+  const double d1 = std::min( curveLength, profilePointDistance + offset );
+
+  std::unique_ptr<QgsPoint> p0( curve->interpolatePoint( d0 ) );
+  std::unique_ptr<QgsPoint> p1( curve->interpolatePoint( d1 ) );
+
+  if ( !p0 || !p1 )
+  {
+    data.cursorLineRubberBand.reset();
+    data.cursorPolygonRubberBand.reset();
+    return;
+  }
+
+  double dx = p1->x() - p0->x();
+  double dy = p1->y() - p0->y();
+
+  const double length = std::sqrt( dx * dx + dy * dy );
+
+  dx /= length;
+  dy /= length;
+
+  const double tolerance = profile->tolerance();
+  const double nX = -dy * tolerance;
+  const double nY = dx * tolerance;
+
+  const double x = mapPoint.x();
+  const double y = mapPoint.y();
+
+  QgsGeometry polyGeom( new QgsPolygon( new QgsLineString(
+    QVector<QgsPoint> {
+      QgsPoint( x + nX, y + nY, data.zMin ),
+      QgsPoint( x - nX, y - nY, data.zMin ),
+      QgsPoint( x - nX, y - nY, data.zMax ),
+      QgsPoint( x + nX, y + nY, data.zMax ),
+      QgsPoint( x + nX, y + nY, data.zMin ),
+    }
+  ) ) );
+
+  if ( !data.cursorPolygonRubberBand )
+  {
+    data.cursorPolygonRubberBand = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity(), Qgis::GeometryType::Polygon );
+    data.cursorPolygonRubberBand->setColor( QColor( 50, 50, 50, 100 ) );
+    data.cursorPolygonRubberBand->setWidth( 0 );
+    data.cursorPolygonRubberBand->setMarkersEnabled( false );
+  }
+
+  data.cursorPolygonRubberBand->setGeometry( polyGeom );
+}
+
+void Qgs3DMapCanvasWidget::setProfileData( QgsElevationProfile *profile, double zMin, double zMax )
+{
+  // only when the generation of the profile finishes, we get zMin and zMax
+  // however, rasters and point clouds trigger profile generation on every elevation profile canvas move/zoom
+  // so Z values of the profile curve in 3D can fluctuate when dealing with those formats and zooming/moving in elevation canvas
+  if ( !profile )
+    return;
+
+  if ( mElevationProfileData.contains( profile ) )
+  {
+    ElevationProfileData &data = mElevationProfileData[profile];
+    data.zMin = zMin;
+    data.zMax = zMax;
+    updateProfileRubberBands( profile );
+    return;
+  }
+
+  ElevationProfileData profileData;
+  profileData.zMin = zMin;
+  profileData.zMax = zMax;
+  mElevationProfileData[profile] = std::move( profileData );
+
+  connect( profile, &QObject::destroyed, this, [this, profile] { mElevationProfileData.erase( profile ); } );
+
+  updateProfileRubberBands( profile );
+}
+
+void Qgs3DMapCanvasWidget::removeProfileData( QgsElevationProfile *profile )
+{
+  hideProfileRubberBands( profile );
+  mElevationProfileData.erase( profile );
+}
+
+void Qgs3DMapCanvasWidget::hideProfileRubberBands( QgsElevationProfile *profile )
+{
+  if ( mElevationProfileData.contains( profile ) )
+  {
+    ElevationProfileData &data = mElevationProfileData[profile];
+    data.rubberBandZMin.reset();
+    data.rubberBandZMax.reset();
+    data.rubberBandSideLines.clear();
+  }
+}
+
+void Qgs3DMapCanvasWidget::updateProfileRubberBands( QgsElevationProfile *profile )
+{
+  if ( !mCanvas || !mElevationProfileData.contains( profile ) )
+    return;
+
+  ElevationProfileData &data = mElevationProfileData[profile];
+
+  QgsCurve *curve = profile->profileCurve();
+  if ( !curve )
+  {
+    data.rubberBandZMin.reset();
+    data.rubberBandZMax.reset();
+    data.rubberBandSideLines.clear();
+    return;
+  }
+
+  const double tolerance = profile->tolerance();
+  QgsGeometry curveGeom( curve->clone() );
+
+  QgsGeometry rubberBandGeom;
+  Qgis::GeometryType geomType;
+  if ( tolerance > 0 )
+  {
+    rubberBandGeom = curveGeom.buffer( tolerance, 8, Qgis::EndCapStyle::Flat, Qgis::JoinStyle::Round, 2 );
+    geomType = Qgis::GeometryType::Polygon;
+  }
+  else
+  {
+    rubberBandGeom = QgsGeometry( curve->curveToLine() );
+    geomType = Qgis::GeometryType::Line;
+  }
+
+  if ( data.geomType != geomType )
+  {
+    data.rubberBandZMin.reset();
+    data.rubberBandZMax.reset();
+    data.rubberBandSideLines.clear();
+    data.geomType = geomType;
+  }
+
+  if ( !data.rubberBandZMin )
+  {
+    data.rubberBandZMin = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity(), geomType );
+    data.rubberBandZMin->setColor( QColor( 200, 200, 200, 200 ) );
+    data.rubberBandZMin->setOutlineColor( QColor( 200, 200, 200, 200 ) );
+    data.rubberBandZMin->setWidth( 3 );
+    data.rubberBandZMin->setMarkersEnabled( false );
+    data.rubberBandZMin->setFillEnabled( false );
+  }
+
+  if ( !data.rubberBandZMax )
+  {
+    data.rubberBandZMax = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity(), geomType );
+    data.rubberBandZMax->setColor( QColor( 200, 200, 200, 200 ) );
+    data.rubberBandZMax->setOutlineColor( QColor( 200, 200, 200, 200 ) );
+    data.rubberBandZMax->setWidth( 3 );
+    data.rubberBandZMax->setMarkersEnabled( false );
+    data.rubberBandZMax->setFillEnabled( false );
+  }
+
+  QgsGeometry geomZMin = rubberBandGeom;
+  QgsGeometry geomZMax = rubberBandGeom;
+
+  QgsAbstractGeometry *gZMin = geomZMin.get();
+  gZMin->addZValue( data.zMin );
+
+  QgsAbstractGeometry *gZMax = geomZMax.get();
+  gZMax->addZValue( data.zMax );
+
+  data.rubberBandZMin->setGeometry( geomZMin );
+  data.rubberBandZMax->setGeometry( geomZMax );
+
+  QVector<QgsPointXY> sidePoints; // used to construct vertical lines at the sides of the bottom/top polygons
+  if ( tolerance > 0 )
+  {
+    const int numCurvePoints = curve->numPoints();
+
+    // vertical lines at the beginning
+    QgsPoint pt1 = curve->vertexAt( QgsVertexId( 0, 0, 0 ) );
+    QgsPoint pt2 = curve->vertexAt( QgsVertexId( 0, 0, 1 ) );
+
+    double x, y;
+    QgsGeometryUtilsBase::perpendicularOffsetPointAlongSegment( pt1.x(), pt1.y(), pt2.x(), pt2.y(), 0.0, tolerance, &x, &y );
+    sidePoints.append( QgsPointXY( x, y ) );
+
+    QgsGeometryUtilsBase::perpendicularOffsetPointAlongSegment( pt1.x(), pt1.y(), pt2.x(), pt2.y(), 0.0, -tolerance, &x, &y );
+    sidePoints.append( QgsPointXY( x, y ) );
+
+    // we want only one vertical line at the arc middle point (where the curve bends, if the curve is made out of multiple segments)
+    for ( int i = 1; i < numCurvePoints - 1; i++ )
+    {
+      const QgsPoint vertexPrevious = curve->vertexAt( QgsVertexId( 0, 0, i - 1 ) );
+      const QgsPoint vertexMiddle = curve->vertexAt( QgsVertexId( 0, 0, i ) );
+      const QgsPoint vertexNext = curve->vertexAt( QgsVertexId( 0, 0, i + 1 ) );
+
+      if ( vertexMiddle == vertexPrevious || vertexMiddle == vertexNext )
+        continue;
+
+      const double averageAngle = QgsGeometryUtilsBase::averageAngle( vertexPrevious.x(), vertexPrevious.y(), vertexMiddle.x(), vertexMiddle.y(), vertexNext.x(), vertexNext.y() ) - M_PI_2;
+      const double dx = std::sin( averageAngle );
+      const double dy = std::cos( averageAngle );
+
+      const double angleBetweenPoints = QgsGeometryUtilsBase::angleBetweenThreePoints( vertexPrevious.x(), vertexPrevious.y(), vertexMiddle.x(), vertexMiddle.y(), vertexNext.x(), vertexNext.y() );
+      const double turnAngle = QgsGeometryUtilsBase::normalizedAngle( angleBetweenPoints - M_PI );
+      const double angleHalf = turnAngle < M_PI ? turnAngle * 0.5 : ( 2.0 * M_PI - turnAngle ) * 0.5;
+
+      const double cosAngleHalf = std::cos( angleHalf );
+      const double miter = std::abs( cosAngleHalf ) > 1e-10 ? tolerance / cosAngleHalf : tolerance;
+
+      const double left = turnAngle < M_PI ? tolerance : miter;
+      const double right = turnAngle < M_PI ? miter : tolerance;
+
+      sidePoints.append( QgsPointXY( vertexMiddle.x() + dx * left, vertexMiddle.y() + dy * left ) );
+      sidePoints.append( QgsPointXY( vertexMiddle.x() - dx * right, vertexMiddle.y() - dy * right ) );
+    }
+
+    // vertical lines at the end
+    pt1 = curve->vertexAt( QgsVertexId( 0, 0, numCurvePoints - 2 ) );
+    pt2 = curve->vertexAt( QgsVertexId( 0, 0, numCurvePoints - 1 ) );
+
+    QgsGeometryUtilsBase::perpendicularOffsetPointAlongSegment( pt1.x(), pt1.y(), pt2.x(), pt2.y(), 1.0, tolerance, &x, &y );
+    sidePoints.append( QgsPointXY( x, y ) );
+
+    QgsGeometryUtilsBase::perpendicularOffsetPointAlongSegment( pt1.x(), pt1.y(), pt2.x(), pt2.y(), 1.0, -tolerance, &x, &y );
+    sidePoints.append( QgsPointXY( x, y ) );
+  }
+  else // not a polygon, so we just construct vertical lines at each vertex of the curve
+  {
+    for ( auto vertex = rubberBandGeom.vertices_begin(); vertex != rubberBandGeom.vertices_end(); vertex++ )
+    {
+      sidePoints.append( QgsPointXY( ( *vertex ).x(), ( *vertex ).y() ) );
+    }
+  }
+
+  data.rubberBandSideLines.resize( sidePoints.size() );
+
+  // construct vertical lines from zMin to zMax
+  for ( qsizetype i = 0; i < sidePoints.size(); i++ )
+  {
+    const QgsPointXY &point = sidePoints[i];
+
+    QgsGeometry lineGeom( new QgsLineString(
+      QVector<QgsPoint> {
+        QgsPoint( point.x(), point.y(), data.zMin ),
+        QgsPoint( point.x(), point.y(), data.zMax ),
+      }
+    ) );
+
+    if ( !data.rubberBandSideLines[i] )
+    {
+      data.rubberBandSideLines[i] = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity(), Qgis::GeometryType::Line );
+      data.rubberBandSideLines[i]->setColor( QColor( 200, 200, 200, 150 ) );
+      data.rubberBandSideLines[i]->setWidth( 3 );
+      data.rubberBandSideLines[i]->setMarkersEnabled( false );
+    }
+
+    data.rubberBandSideLines[i]->setGeometry( lineGeom );
+  }
+}
+
 //
 // Qgs3DMapClippingToleranceWidgetSettingsAction
 //
@@ -1412,7 +1737,10 @@ Qgs3DMapClippingToleranceWidgetSettingsAction::Qgs3DMapClippingToleranceWidgetSe
   auto refreshLockButton = [this]( bool locked ) {
     mLockButton->setIcon( QIcon( QgsApplication::iconPath( locked ? u"locked.svg"_s : u"unlocked.svg"_s ) ) );
     mToleranceWidget->setEnabled( locked );
-    mLockButton->setToolTip( locked ? tr( "Locked: spinbox enabled, cross section width from tolerance.\nClick to unlock for width from 3rd point." ) : tr( "Unlocked: spinbox disabled, cross section width from 3rd point.\nClick to lock for tolerance width." ) );
+    mLockButton->setToolTip(
+      locked ? tr( "Locked: spinbox enabled, cross section width from tolerance.\nClick to unlock for width from 3rd point." )
+             : tr( "Unlocked: spinbox disabled, cross section width from 3rd point.\nClick to lock for tolerance width." )
+    );
   };
 
   const bool isLocked = !Qgs3DMapCanvasWidget::settingCrossSectionToleranceLocked->value();

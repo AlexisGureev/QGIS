@@ -31,8 +31,7 @@ using namespace Qt::StringLiterals;
 
 QgsPolygon3DSymbol::QgsPolygon3DSymbol()
   : mMaterialSettings( std::make_unique<QgsPhongMaterialSettings>() )
-{
-}
+{}
 
 QgsPolygon3DSymbol::~QgsPolygon3DSymbol() = default;
 
@@ -104,9 +103,9 @@ void QgsPolygon3DSymbol::readXml( const QDomElement &elem, const QgsReadWriteCon
 
   const QDomElement elemMaterial = elem.firstChildElement( u"material"_s );
   const QString materialType = elem.attribute( u"material_type"_s, u"phong"_s );
-  mMaterialSettings.reset( Qgs3D::materialRegistry()->createMaterialSettings( materialType ) );
+  mMaterialSettings = Qgs3D::materialRegistry()->createMaterialSettings( materialType );
   if ( !mMaterialSettings )
-    mMaterialSettings.reset( Qgs3D::materialRegistry()->createMaterialSettings( u"phong"_s ) );
+    mMaterialSettings = Qgs3D::materialRegistry()->createMaterialSettings( u"phong"_s );
   mMaterialSettings->readXml( elemMaterial, context );
 
   const QDomElement elemDDP = elem.firstChildElement( u"data-defined-properties"_s );
@@ -175,9 +174,7 @@ bool QgsPolygon3DSymbol::exportGeometries( Qgs3DSceneExporter *exporter, Qt3DCor
 {
   QList<Qt3DCore::QEntity *> subEntities = entity->findChildren<Qt3DCore::QEntity *>( QString(), Qt::FindDirectChildrenOnly );
   // sort geometries by their name in order to always export them in the same way:
-  std::sort( subEntities.begin(), subEntities.end(), []( const Qt3DCore::QEntity *a, const Qt3DCore::QEntity *b ) {
-    return a->objectName() < b->objectName();
-  } );
+  std::sort( subEntities.begin(), subEntities.end(), []( const Qt3DCore::QEntity *a, const Qt3DCore::QEntity *b ) { return a->objectName() < b->objectName(); } );
 
   if ( subEntities.isEmpty() )
   {

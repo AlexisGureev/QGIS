@@ -30,8 +30,7 @@ class QgsVectorLayer;
 class QgsMarkerSymbol;
 class QgsLineSymbol;
 
-template<class T>
-class GUI_EXPORT QgsMapToolEditBlankSegments;
+template<class T> class GUI_EXPORT QgsMapToolEditBlankSegments;
 
 /**
  * \ingroup gui
@@ -85,7 +84,7 @@ class GUI_EXPORT QgsSymbolLayerWidget : public QWidget, public QgsExpressionCont
     QgsExpressionContext createExpressionContext() const override;
 
   private:
-    QgsVectorLayer *mVectorLayer = nullptr;
+    QPointer<QgsVectorLayer> mVectorLayer;
 
   signals:
 
@@ -483,6 +482,8 @@ class GUI_EXPORT QgsTemplatedLineSymbolLayerWidget : public QgsSymbolLayerWidget
      * \param parent parent widget
      */
     QgsTemplatedLineSymbolLayerWidget( TemplatedSymbolType symbolType, QgsVectorLayer *vl, QWidget *parent SIP_TRANSFERTHIS = nullptr );
+
+    bool event( QEvent *e ) override;
 
     void setSymbolLayer( QgsSymbolLayer *layer ) override;
     QgsSymbolLayer *symbolLayer() override;

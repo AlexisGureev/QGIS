@@ -15,8 +15,10 @@
 
 #include "qgs3dexportobject.h"
 
+#include "qgs3d.h"
 #include "qgsabstractmaterialsettings.h"
 #include "qgslogger.h"
+#include "qgsmaterial3dhandler.h"
 
 #include <QDir>
 #include <QImage>
@@ -81,7 +83,12 @@ void Qgs3DExportObject::setupNormalCoordinates( const QVector<float> &normalsBuf
 
   // Qt does not provide QMatrix3x3 * QVector3D multiplication so we use QMatrix4x4
   QMatrix3x3 normal3x3 = transform.normalMatrix();
-  QMatrix4x4 normal4x4( normal3x3( 0, 0 ), normal3x3( 0, 1 ), normal3x3( 0, 2 ), 0, normal3x3( 1, 0 ), normal3x3( 1, 1 ), normal3x3( 1, 2 ), 0, normal3x3( 2, 0 ), normal3x3( 2, 1 ), normal3x3( 2, 2 ), 0, 0, 0, 0, 1 );
+  // clang-format off
+  QMatrix4x4 normal4x4( normal3x3( 0, 0 ), normal3x3( 0, 1 ), normal3x3( 0, 2 ), 0,
+                       normal3x3( 1, 0 ), normal3x3( 1, 1 ), normal3x3( 1, 2 ), 0,
+                       normal3x3( 2, 0 ), normal3x3( 2, 1 ), normal3x3( 2, 2 ), 0,
+                       0, 0, 0, 1 );
+  // clang-format on
 
   for ( int i = 0; i < normalsBuffer.size(); i += 3 )
   {
@@ -107,7 +114,7 @@ void Qgs3DExportObject::setupTextureCoordinates( const QVector<float> &texturesB
 void Qgs3DExportObject::setupMaterial( QgsAbstractMaterialSettings *material )
 {
   mMaterialParameters.clear();
-  QMap<QString, QString> parameters = material->toExportParameters();
+  QMap<QString, QString> parameters = Qgs3D::toMaterialExportParameters( material );
   for ( auto it = parameters.begin(); it != parameters.end(); ++it )
   {
     mMaterialParameters[it.key()] = it.value();

@@ -17,6 +17,7 @@
 
 #include "qgssettingsregistryapp.h"
 
+#include "qgisapp.h"
 #include "qgsgui.h"
 #include "qgsidentifyresultsdialog.h"
 #include "qgsimagewarper.h"
@@ -53,8 +54,18 @@ QgsSettingsRegistryApp::QgsSettingsRegistryApp()
   // copy values from old keys to new keys and delete the old ones
   // for backward compatibility, old keys are recreated when the registry gets deleted
 
+  // TODO: remove in QGIS 4.4 (after LTR 4.2)
+
   // single settings - added in 3.30
   QgsIdentifyResultsDialog::settingHideNullValues->copyValueFromKey( u"Map/hideNullValues"_s, true );
+  QgsIdentifyResultsDialog::settingIdentifyExpand->copyValueFromKey( u"Map/identifyExpand"_s, true );
+  QgsIdentifyResultsDialog::settingIdentifyAutoFeatureForm->copyValueFromKey( u"Map/identifyAutoFeatureForm"_s, true );
+  QgsIdentifyResultsDialog::settingIdentifyAutoFeatureForm->copyValueFromKey( u"/Map/identifyAutoFeatureForm"_s, true );
+  QgsIdentifyResultsDialog::settingHideDerivedAttributes->copyValueFromKey( u"Map/hideDerivedAttributes"_s, true );
+  QgsIdentifyResultsDialog::settingHideDerivedAttributes->copyValueFromKey( u"/Map/hideDerivedAttributes"_s, true );
+  QgsIdentifyResultsDialog::settingColumnWidth->copyValueFromKey( u"Windows/Identify/columnWidth"_s, true );
+  QgsIdentifyResultsDialog::settingColumnWidthTable->copyValueFromKey( u"Windows/Identify/columnWidthTable"_s, true );
+  QgisApp::settingsAskToDeleteFeatures->copyValueFromKey( u"app/askToDeleteFeatures"_s, true );
   QgsPluginManager::settingsAutomaticallyCheckForPluginUpdates->copyValueFromKey( u"plugins/automatically-check-for-updates"_s, true );
   QgsPluginManager::settingsAllowExperimental->copyValueFromKey( u"app/plugin_installer/allowExperimental"_s, true );
   QgsPluginManager::settingsAllowDeprecated->copyValueFromKey( u"app/plugin_installer/allowDeprecated"_s, true );
@@ -65,15 +76,4 @@ QgsSettingsRegistryApp::QgsSettingsRegistryApp()
 }
 
 QgsSettingsRegistryApp::~QgsSettingsRegistryApp()
-{
-  // TODO QGIS 5.0: Remove
-  // backward compatibility for settings
-  QgsIdentifyResultsDialog::settingHideNullValues->copyValueToKeyIfChanged( u"Map/hideNullValues"_s );
-  QgsPluginManager::settingsAutomaticallyCheckForPluginUpdates->copyValueToKeyIfChanged( u"plugins/automatically-check-for-updates"_s );
-  QgsPluginManager::settingsAllowExperimental->copyValueToKeyIfChanged( u"app/plugin_installer/allowExperimental"_s );
-  QgsPluginManager::settingsAllowDeprecated->copyValueToKeyIfChanged( u"app/plugin_installer/allowDeprecated"_s );
-  QgsPluginManager::settingsCheckOnStartLastDate->copyValueFromKey( u"app/plugin_installer/checkOnStartLastDate"_s, true );
-  QgsPluginManager::settingsSeenPlugins->copyValueFromKey( u"app/plugin_installer/seen_plugins"_s, true );
-  QgsPluginManager::settingsLastZipDirectory->copyValueFromKey( u"app/plugin_installer/lastZipDirectory"_s, true );
-  QgsPluginManager::settingsShowInstallFromZipWarning->copyValueFromKey( u"app/plugin_installer/showInstallFromZipWarning"_s, true );
-}
+{}

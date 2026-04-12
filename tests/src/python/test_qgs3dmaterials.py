@@ -6,20 +6,20 @@ the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 """
 
-from qgis.PyQt.QtGui import QColor
-from qgis.PyQt.QtXml import QDomDocument
-from qgis.core import QgsReadWriteContext
-from qgis._3d import (
-    QgsSimpleLineMaterialSettings,
-    QgsPhongMaterialSettings,
+import unittest
+
+from qgis.core import (
     QgsGoochMaterialSettings,
     QgsMetalRoughMaterialSettings,
-    QgsPhongTexturedMaterialSettings,
     QgsNullMaterialSettings,
+    QgsPhongMaterialSettings,
+    QgsPhongTexturedMaterialSettings,
+    QgsReadWriteContext,
+    QgsSimpleLineMaterialSettings,
 )
-import unittest
-from qgis.testing import start_app, QgisTestCase
-
+from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtXml import QDomDocument
+from qgis.testing import QgisTestCase, start_app
 from utilities import unitTestDataPath
 
 start_app()
@@ -27,7 +27,6 @@ TEST_DATA_DIR = unitTestDataPath()
 
 
 class TestQgsSimpleLineMaterialSettings(QgisTestCase):
-
     def test_getters_setters(self):
         # Create fresh instance
         settings = QgsSimpleLineMaterialSettings()
@@ -92,7 +91,6 @@ class TestQgsSimpleLineMaterialSettings(QgisTestCase):
 
 
 class TestQgsPhongMaterialSettings(QgisTestCase):
-
     def test_getters_setters(self):
         settings = QgsPhongMaterialSettings()
 
@@ -234,7 +232,6 @@ class TestQgsPhongMaterialSettings(QgisTestCase):
 
 
 class TestQgsGoochMaterialSettings(QgisTestCase):
-
     def test_getters_setters(self):
         settings = QgsGoochMaterialSettings()
 
@@ -363,14 +360,13 @@ class TestQgsGoochMaterialSettings(QgisTestCase):
 
 
 class TestQgsMetalRoughMaterialSettings(unittest.TestCase):
-
     def test_getters_setters(self):
         settings = QgsMetalRoughMaterialSettings()
 
         # Test default values
         self.assertEqual(settings.baseColor(), QColor.fromRgbF(0.5, 0.5, 0.5, 1.0))
         self.assertEqual(settings.metalness(), 0.0)
-        self.assertEqual(settings.roughness(), 0.0)
+        self.assertEqual(settings.roughness(), 0.5)
 
         # Test setters/getters
         settings.setBaseColor(QColor(255, 0, 0))
@@ -444,7 +440,6 @@ class TestQgsMetalRoughMaterialSettings(unittest.TestCase):
 
 
 class TestQgsPhongTexturedMaterialSettings(QgisTestCase):
-
     def test_getters_setters(self):
         settings = QgsPhongTexturedMaterialSettings()
 
@@ -583,7 +578,6 @@ class TestQgsPhongTexturedMaterialSettings(QgisTestCase):
 
 
 class TestQgsNullMaterialSettings(QgisTestCase):
-
     def test_clone(self):
         settings = QgsNullMaterialSettings()
         cloned = settings.clone()

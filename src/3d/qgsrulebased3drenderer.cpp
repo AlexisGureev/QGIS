@@ -32,8 +32,7 @@ using namespace Qt::StringLiterals;
 
 QgsRuleBased3DRendererMetadata::QgsRuleBased3DRendererMetadata()
   : Qgs3DRendererAbstractMetadata( u"rulebased"_s )
-{
-}
+{}
 
 QgsAbstract3DRenderer *QgsRuleBased3DRendererMetadata::createRenderer( QDomElement &elem, const QgsReadWriteContext &context )
 {
@@ -292,7 +291,9 @@ void QgsRuleBased3DRenderer::Rule::prepare( const Qgs3DRenderContext &context, Q
   }
 }
 
-QgsRuleBased3DRenderer::Rule::RegisterResult QgsRuleBased3DRenderer::Rule::registerFeature( const QgsFeature &feature, Qgs3DRenderContext &context, const QgsRuleBased3DRenderer::RuleToHandlerMap &handlers ) const
+QgsRuleBased3DRenderer::Rule::RegisterResult QgsRuleBased3DRenderer::Rule::registerFeature(
+  const QgsFeature &feature, Qgs3DRenderContext &context, const QgsRuleBased3DRenderer::RuleToHandlerMap &handlers
+) const
 {
   if ( !isFilterOK( feature, context ) )
     return Filtered;
@@ -357,8 +358,7 @@ bool QgsRuleBased3DRenderer::Rule::isFilterOK( const QgsFeature &f, Qgs3DRenderC
 
 QgsRuleBased3DRenderer::QgsRuleBased3DRenderer( QgsRuleBased3DRenderer::Rule *root )
   : mRootRule( root )
-{
-}
+{}
 
 QgsRuleBased3DRenderer::~QgsRuleBased3DRenderer()
 {
@@ -390,15 +390,7 @@ Qt3DCore::QEntity *QgsRuleBased3DRenderer::createEntity( Qgs3DMapSettings *map )
   if ( !vl )
     return nullptr;
 
-  // we start with a maximal z range because we can't know this upfront. There's too many
-  // factors to consider eg vertex z data, terrain heights, data defined offsets and extrusion heights,...
-  // This range will be refined after populating the nodes to the actual z range of the generated chunks nodes.
-  // Assuming the vertical height is in meter, then it's extremely unlikely that a real vertical
-  // height will exceed this amount!
-  constexpr double MINIMUM_VECTOR_Z_ESTIMATE = -100000;
-  constexpr double MAXIMUM_VECTOR_Z_ESTIMATE = 100000;
-
-  return new QgsRuleBasedChunkedEntity( map, vl, MINIMUM_VECTOR_Z_ESTIMATE, MAXIMUM_VECTOR_Z_ESTIMATE, tilingSettings(), mRootRule );
+  return new QgsRuleBasedChunkedEntity( map, vl, Qgs3DUtils::MINIMUM_VECTOR_Z_ESTIMATE, Qgs3DUtils::MAXIMUM_VECTOR_Z_ESTIMATE, tilingSettings(), mRootRule );
 }
 
 void QgsRuleBased3DRenderer::writeXml( QDomElement &elem, const QgsReadWriteContext &context ) const

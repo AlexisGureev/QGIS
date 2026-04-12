@@ -12,9 +12,11 @@ __author__ = "(C) 2022 by Nyall Dawson"
 __date__ = "14/07/2022"
 __copyright__ = "Copyright 2022, The QGIS Project"
 
-from qgis.PyQt.QtCore import QDate, QDateTime, Qt, QTime, QTimeZone, QVariant
+import unittest
+
 from qgis.core import (
     NULL,
+    Qgis,
     QgsArcGisRestContext,
     QgsArcGisRestUtils,
     QgsCoordinateReferenceSystem,
@@ -25,9 +27,8 @@ from qgis.core import (
     QgsGeometry,
     QgsUnsetAttributeValue,
 )
-import unittest
-from qgis.testing import start_app, QgisTestCase
-
+from qgis.PyQt.QtCore import QDate, QDateTime, Qt, QTime, QTimeZone, QVariant
+from qgis.testing import QgisTestCase, start_app
 from utilities import unitTestDataPath
 
 start_app()
@@ -35,7 +36,6 @@ TEST_DATA_DIR = unitTestDataPath()
 
 
 class TestQgsArcGisRestUtils(QgisTestCase):
-
     def test_json_to_geometry(self):
         tests = [
             (
@@ -913,6 +913,31 @@ class TestQgsArcGisRestUtils(QgisTestCase):
                 "nullable": False,
                 "type": "esriFieldTypeSmallInteger",
             },
+        )
+
+    def test_serviceCapabilitiesFromString(self):
+        res = QgsArcGisRestUtils.serviceCapabilitiesFromString("")
+        self.assertEqual(res, Qgis.ArcGisRestServiceCapabilities())
+        res = QgsArcGisRestUtils.serviceCapabilitiesFromString("update")
+        self.assertEqual(res, Qgis.ArcGisRestServiceCapability.Update)
+        res = QgsArcGisRestUtils.serviceCapabilitiesFromString("UPDATE")
+        self.assertEqual(res, Qgis.ArcGisRestServiceCapability.Update)
+        res = QgsArcGisRestUtils.serviceCapabilitiesFromString("UPDATE,query")
+        self.assertEqual(
+            res,
+            Qgis.ArcGisRestServiceCapability.Update
+            | Qgis.ArcGisRestServiceCapability.Query,
+        )
+        res = QgsArcGisRestUtils.serviceCapabilitiesFromString(
+            "UPDATE,query,Delete,Create,map"
+        )
+        self.assertEqual(
+            res,
+            Qgis.ArcGisRestServiceCapability.Update
+            | Qgis.ArcGisRestServiceCapability.Query
+            | Qgis.ArcGisRestServiceCapability.Delete
+            | Qgis.ArcGisRestServiceCapability.Create
+            | Qgis.ArcGisRestServiceCapability.Map,
         )
 
 

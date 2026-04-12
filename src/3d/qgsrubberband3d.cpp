@@ -15,6 +15,7 @@
 
 #include "qgsrubberband3d.h"
 
+#include "qgs3d.h"
 #include "qgs3dmapsettings.h"
 #include "qgs3dutils.h"
 #include "qgsabstract3dengine.h"
@@ -24,6 +25,7 @@
 #include "qgslinestring.h"
 #include "qgslinevertexdata_p.h"
 #include "qgsmarkersymbol.h"
+#include "qgsmaterial3dhandler.h"
 #include "qgsmessagelog.h"
 #include "qgspoint3dbillboardmaterial.h"
 #include "qgspolygon.h"
@@ -112,9 +114,7 @@ void QgsRubberBand3D::setupLine( Qt3DCore::QEntity *parentEntity )
   mLineMaterial->setLineWidth( mWidth );
   mLineMaterial->setLineColor( mColor );
 
-  QObject::connect( mEngine, &QgsAbstract3DEngine::sizeChanged, mLineMaterial, [this] {
-    mLineMaterial->setViewportSize( mEngine->size() );
-  } );
+  QObject::connect( mEngine, &QgsAbstract3DEngine::sizeChanged, mLineMaterial, [this] { mLineMaterial->setViewportSize( mEngine->size() ); } );
   mLineMaterial->setViewportSize( mEngine->size() );
 
   mLineEntity->addComponent( mLineMaterial );
@@ -139,7 +139,7 @@ void QgsRubberBand3D::setupPolygon( Qt3DCore::QEntity *parentEntity )
   polygonMaterialSettings.setAmbient( mColor );
   polygonMaterialSettings.setDiffuse( mColor );
   polygonMaterialSettings.setOpacity( DEFAULT_POLYGON_OPACITY );
-  mPolygonMaterial = polygonMaterialSettings.toMaterial( QgsMaterialSettingsRenderingTechnique::Triangles, QgsMaterialContext() );
+  mPolygonMaterial = Qgs3D::toMaterial( &polygonMaterialSettings, Qgis::MaterialRenderingTechnique::Triangles, QgsMaterialContext() );
   mPolygonEntity->addComponent( mPolygonMaterial );
 
   mPolygonTransform = new QgsGeoTransform;
@@ -252,7 +252,7 @@ void QgsRubberBand3D::setColor( const QColor color )
       polygonMaterialSettings.setAmbient( mColor );
       polygonMaterialSettings.setDiffuse( mColor );
       polygonMaterialSettings.setOpacity( DEFAULT_POLYGON_OPACITY );
-      mPolygonMaterial = polygonMaterialSettings.toMaterial( QgsMaterialSettingsRenderingTechnique::Triangles, QgsMaterialContext() );
+      mPolygonMaterial = Qgs3D::toMaterial( &polygonMaterialSettings, Qgis::MaterialRenderingTechnique::Triangles, QgsMaterialContext() );
       mPolygonEntity->addComponent( mPolygonMaterial );
     }
   }
@@ -469,14 +469,19 @@ void QgsRubberBand3D::updateGeometry()
         QgsMessageLog::logMessage( tessellator.error(), QObject::tr( "3D" ) );
       }
       // extract vertex buffer data from tessellator
-      const QByteArray data( reinterpret_cast<const char *>( tessellator.data().constData() ), static_cast<int>( tessellator.data().count() * sizeof( float ) ) );
-      const int vertexCount = static_cast<int>( data.count() ) / tessellator.stride();
-      mPolygonGeometry->setData( data, vertexCount, QVector<QgsFeatureId>(), QVector<uint>() );
+      const QByteArray vertexBuffer = tessellator.vertexBuffer();
+      const QByteArray indexBuffer = tessellator.indexBuffer();
+      const size_t vertexCount = tessellator.uniqueVertexCount();
+      const size_t indexCount = tessellator.dataVerticesCount();
+
+      mPolygonGeometry->setVertexBufferData( vertexBuffer, vertexCount, QVector<QgsFeatureId>(), QVector<uint>() );
+      mPolygonGeometry->setIndexBufferData( indexBuffer, indexCount );
       mPolygonTransform->setGeoTranslation( mMapSettings->origin() );
     }
     else
     {
-      mPolygonGeometry->setData( QByteArray(), 0, QVector<QgsFeatureId>(), QVector<uint>() );
+      mPolygonGeometry->setVertexBufferData( QByteArray(), 0, QVector<QgsFeatureId>(), QVector<uint>() );
+      mPolygonGeometry->setIndexBufferData( QByteArray(), 0 );
     }
   }
 }
@@ -490,9 +495,7 @@ void QgsRubberBand3D::updateMarkerMaterial()
       mMarkerMaterial = new QgsPoint3DBillboardMaterial();
       mMarkerEntity->addComponent( mMarkerMaterial );
       //TODO: QgsAbstract3DEngine::sizeChanged should have const QSize &size param
-      QObject::connect( mEngine, &QgsAbstract3DEngine::sizeChanged, mMarkerMaterial, [this] {
-        mMarkerMaterial->setViewportSize( mEngine->size() );
-      } );
+      QObject::connect( mEngine, &QgsAbstract3DEngine::sizeChanged, mMarkerMaterial, [this] { mMarkerMaterial->setViewportSize( mEngine->size() ); } );
     }
 
     mMarkerMaterial->setTexture2DFromSymbol( mMarkerSymbol.get(), Qgs3DRenderContext::fromMapSettings( mMapSettings ) );

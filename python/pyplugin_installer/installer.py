@@ -22,55 +22,64 @@
  ***************************************************************************/
 """
 
-import os
 import json
+import os
+import shutil
 import zipfile
 from functools import partial
-
-from qgis.PyQt import sip
-from qgis.PyQt.QtCore import Qt, QObject, QDateTime, QDir, QUrl, QFileInfo, QFile
-from qgis.PyQt.QtWidgets import (
-    QApplication,
-    QDialog,
-    QDialogButtonBox,
-    QFrame,
-    QMessageBox,
-    QLabel,
-    QVBoxLayout,
-    QPushButton,
-)
-from qgis.PyQt.QtNetwork import QNetworkRequest
 
 from qgis.core import (
     Qgis,
     QgsApplication,
     QgsMessageLog,
     QgsNetworkAccessManager,
+    QgsNetworkRequestParameters,
     QgsSettings,
     QgsSettingsTree,
-    QgsNetworkRequestParameters,
 )
-from qgis.gui import QgsMessageBar, QgsPasswordLineEdit, QgsHelp
+from qgis.gui import QgsHelp, QgsMessageBar, QgsPasswordLineEdit
+from qgis.PyQt import sip
+from qgis.PyQt.QtCore import (
+    QDateTime,
+    QDir,
+    QFile,
+    QFileInfo,
+    QObject,
+    Qt,
+    QTemporaryDir,
+    QUrl,
+)
+from qgis.PyQt.QtNetwork import QNetworkRequest
+from qgis.PyQt.QtWidgets import (
+    QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QFrame,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 from qgis.utils import (
+    HOME_PLUGIN_PATH,
+    OverrideCursor,
     iface,
+    isPluginLoaded,
+    loadPlugin,
+    plugins_metadata_parser,
     startPlugin,
     unloadPlugin,
-    loadPlugin,
-    OverrideCursor,
     updateAvailablePlugins,
-    plugins_metadata_parser,
-    isPluginLoaded,
-    HOME_PLUGIN_PATH,
 )
-from .installer_data import repositories, plugins, officialRepo, reposGroup, removeDir
-from .qgsplugininstallerinstallingdialog import QgsPluginInstallerInstallingDialog
-from .qgsplugininstallerpluginerrordialog import QgsPluginInstallerPluginErrorDialog
-from .qgsplugininstallerfetchingdialog import QgsPluginInstallerFetchingDialog
-from .qgsplugininstallerrepositorydialog import QgsPluginInstallerRepositoryDialog
-from .unzip import unzip
+
+from .installer_data import officialRepo, plugins, removeDir, reposGroup, repositories
 from .plugindependencies import find_dependencies
 from .qgsplugindependenciesdialog import QgsPluginDependenciesDialog
-
+from .qgsplugininstallerfetchingdialog import QgsPluginInstallerFetchingDialog
+from .qgsplugininstallerinstallingdialog import QgsPluginInstallerInstallingDialog
+from .qgsplugininstallerpluginerrordialog import QgsPluginInstallerPluginErrorDialog
+from .qgsplugininstallerrepositorydialog import QgsPluginInstallerRepositoryDialog
+from .unzip import unzip
 
 # public instances:
 pluginInstaller = None
@@ -310,9 +319,21 @@ class QgsPluginInstaller(QObject):
         self.exportPluginsToManager()
 
     # ----------------------------------------- #
-    def showPluginManagerWhenReady(self, *params):
-        """Open the plugin manager window. If fetching is still in progress, it shows the progress window first"""
-        """ Optionally pass the index of tab to be opened in params """
+    def showPluginManagerWhenReady(
+        self, tab_index: int = -1, search_term: str = ""
+    ) -> None:
+        """
+        Open the plugin manager window.
+
+        If fetching is still in progress, it shows the progress window first
+        Optionally pass the index of tab to be opened and a search term
+        to filter plugins in the manager
+
+        :param tab_index: index of the tab to be opened
+        :type tab_index: int
+        :param search_term: text used to filter plugins in the manager
+        :type search_term: str
+        """
         if self.message_bar_widget:
             if not sip.isdeleted(self.message_bar_widget):
                 iface.messageBar().popWidget(self.message_bar_widget)
@@ -322,13 +343,16 @@ class QgsPluginInstaller(QObject):
         self.exportRepositoriesToManager()
         self.exportPluginsToManager()
 
-        # finally, show the plugin manager window
-        tabIndex = -1
-        if len(params) == 1:
-            indx = str(params[0])
-            if indx.isdigit() and int(indx) > -1 and int(indx) < 7:
-                tabIndex = int(indx)
-        iface.pluginManagerInterface().showPluginManager(tabIndex)
+        # Finally, show the plugin manager window
+        # Ensure that the index is within a valid range
+        try:
+            tab_index = int(tab_index)
+            if tab_index < 0 or tab_index > 6:
+                tab_index = -1
+        except (ValueError, TypeError):
+            tab_index = -1
+
+        iface.pluginManagerInterface().showPluginManager(tab_index, search_term)
 
     # ----------------------------------------- #
     def onManagerClose(self):
@@ -644,9 +668,9 @@ class QgsPluginInstaller(QObject):
             dlg.editAuthCfgWgt.configId().strip()
             != repositories.all()[reposName]["authcfg"]
         ):
-            repositories.all()[reposName][
-                "authcfg"
-            ] = dlg.editAuthCfgWgt.configId().strip()
+            repositories.all()[reposName]["authcfg"] = (
+                dlg.editAuthCfgWgt.configId().strip()
+            )
         if (
             dlg.editURL.text().strip() == repositories.all()[reposName]["url"]
             and dlg.checkBoxEnabled.checkState()
@@ -785,23 +809,16 @@ class QgsPluginInstaller(QObject):
         if isPluginLoaded(pluginName):
             unloadPlugin(pluginName)
 
-        # If the target directory already exists as a link,
-        # remove the link without resolving
-        QFile(pluginDirectory).remove()
-
         password = None
         infoString = None
         success = False
         keepTrying = True
 
+        extractDir = QTemporaryDir()
         while keepTrying:
             try:
                 # Test extraction. If fails, then exception will be raised and no removing occurs
-                unzip(filePath, pluginsDirectory, password)
-                # Removing old plugin files if exist
-                removeDir(pluginDirectory)
-                # Extract new files
-                unzip(filePath, pluginsDirectory, password)
+                unzip(filePath, extractDir.path(), password)
                 keepTrying = False
                 success = True
             except Exception as e:
@@ -839,6 +856,24 @@ class QgsPluginInstaller(QObject):
                         f"Failed to unzip the plugin package\n{filePath}.\nProbably it is broken"
                     )
                     keepTrying = False
+
+        if success:
+            # Removing old plugin files if exist
+            # If the target directory already exists as a link,
+            # the link should be removed without resolving
+            infoString = removeDir(pluginDirectory)
+            if infoString:
+                success = False
+
+            try:
+                shutil.move(extractDir.filePath(pluginName), pluginsDirectory)
+            except:
+                infoString = (
+                    self.tr("Could not store plugin to the plugin directory:")
+                    + "\n"
+                    + pluginDirectory
+                )
+                success = False
 
         if success:
             with OverrideCursor(Qt.CursorShape.WaitCursor):

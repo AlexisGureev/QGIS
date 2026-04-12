@@ -20,8 +20,10 @@
 
 #include "qgis.h"
 #include "qgis_gui.h"
+#include "qgsmodelundocommand.h"
 #include "qgsprocessingmodelchilddependency.h"
 #include "qgsprocessingtoolboxmodel.h"
+#include "qobjectuniqueptr.h"
 
 class QgsMessageBar;
 class QgsProcessingModelAlgorithm;
@@ -31,6 +33,9 @@ class QgsModelViewToolPan;
 class QgsModelViewToolSelect;
 class QgsScreenHelper;
 class QgsProcessingAlgorithmDialogBase;
+class QgsModelDesignerConfigDockWidget;
+class QgsProcessingParameterWidgetContext;
+class QgsProcessingContextGenerator;
 
 ///@cond NOT_STABLE
 
@@ -65,7 +70,7 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public Ui::QgsMode
     /**
      * Starts an undo command. This should be called before any changes are made to the model.
      */
-    void beginUndoCommand( const QString &text, int id = 0 );
+    void beginUndoCommand( const QString &text, const QString &id = QString(), QgsModelUndoCommand::CommandOperation operation SIP_PYARGREMOVE = QgsModelUndoCommand::CommandOperation::Unknown );
 
     /**
      * Ends the current undo command. This should be called after changes are made to the model.
@@ -97,8 +102,18 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public Ui::QgsMode
 
     /**
      * Sets the related \a scene.
+     *
+     * \see modelScene()
      */
     void setModelScene( QgsModelGraphicsScene *scene SIP_TRANSFER );
+
+    /**
+     * Returns the related model scene.
+     *
+     * \see setModelScene()
+     * \since QGIS 4.0
+     */
+    QgsModelGraphicsScene *modelScene();
 
     /**
      * Save action.
@@ -133,12 +148,23 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public Ui::QgsMode
     // cppcheck-suppress pureVirtualCall
     virtual QgsProcessingAlgorithmDialogBase *createExecutionDialog() = 0 SIP_TRANSFERBACK;
 
+    /**
+     * Creates a new widget context appropriate for the dialog.
+     */
+    virtual QgsProcessingParameterWidgetContext createWidgetContext() = 0; // cppcheck-suppress pureVirtualCall
+
+    /**
+     * Registers a Processing context \a generator class that will be used to retrieve
+     * a Processing context for the dialog when required.
+     */
+    void registerProcessingContextGenerator( QgsProcessingContextGenerator *generator );
+
     QToolBar *toolbar() { return mToolbar; }
     QAction *actionOpen() { return mActionOpen; }
     QAction *actionSaveInProject() { return mActionSaveInProject; }
     QAction *actionRun() { return mActionRun; }
     QgsMessageBar *messageBar() { return mMessageBar; }
-    QGraphicsView *view() { return mView; }
+    QgsModelGraphicsView *view() { return mView; }
 
     void setDirty( bool dirty );
 
@@ -193,14 +219,9 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public Ui::QgsMode
     void run( const QSet<QString> &childAlgorithmSubset = QSet<QString>() );
     void showChildAlgorithmOutputs( const QString &childId );
     void showChildAlgorithmLog( const QString &childId );
+    void onItemFocused( QgsModelComponentGraphicItem *item );
 
   private:
-    enum UndoCommand
-    {
-      NameChanged = 1,
-      GroupChanged
-    };
-
     std::unique_ptr<QgsProcessingModelAlgorithm> mModel;
 
     QgsScreenHelper *mScreenHelper = nullptr;
@@ -211,7 +232,7 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public Ui::QgsMode
     QActionGroup *mToolsActionGroup = nullptr;
 
     QgsModelViewToolPan *mPanTool = nullptr;
-    QgsModelViewToolSelect *mSelectTool = nullptr;
+    QObjectUniquePtr<QgsModelViewToolSelect> mSelectTool;
     QgsModelGraphicsScene *mScene = nullptr;
 
     bool mHasChanged = false;
@@ -230,6 +251,11 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public Ui::QgsMode
     QAction *mActionPaste = nullptr;
     int mBlockUndoCommands = 0;
     int mIgnoreUndoStackChanges = 0;
+
+    QgsDockWidget *mConfigWidgetDock = nullptr;
+    QgsModelDesignerConfigDockWidget *mConfigWidget = nullptr;
+
+    QgsProcessingContextGenerator *mProcessingContextGenerator = nullptr;
 
     QString mTitle;
 

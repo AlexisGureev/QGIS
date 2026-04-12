@@ -48,7 +48,8 @@ class TestQgsProcessingCheckGeometry : public QgsTest
 
   public:
     TestQgsProcessingCheckGeometry()
-      : QgsTest( u"Processing Algorithms Check Geometry"_s ) {}
+      : QgsTest( u"Processing Algorithms Check Geometry"_s )
+    {}
 
   private slots:
     void initTestCase();    // will be called before the first testfunction is executed.
@@ -115,11 +116,6 @@ void TestQgsProcessingCheckGeometry::initTestCase()
   QgsApplication::init();
   QgsApplication::initQgis();
 
-  // Set up the QgsSettings environment
-  QCoreApplication::setOrganizationName( u"QGIS"_s );
-  QCoreApplication::setOrganizationDomain( u"qgis.org"_s );
-  QCoreApplication::setApplicationName( u"QGIS-TEST"_s );
-
   QgsApplication::processingRegistry()->addProvider( new QgsNativeAlgorithms( QgsApplication::processingRegistry() ) );
 
   const QDir testDataDir( QDir( TEST_DATA_DIR ).absoluteFilePath( "geometry_checker" ) );
@@ -175,9 +171,7 @@ void TestQgsProcessingCheckGeometry::angleAlg()
 
   layerToTest->selectByIds( QgsFeatureIds() << 0 << 1 );
 
-  std::unique_ptr<QgsProcessingAlgorithm> alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryangle"_s )
-  );
+  std::unique_ptr<QgsProcessingAlgorithm> alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryangle"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -202,9 +196,7 @@ void TestQgsProcessingCheckGeometry::angleAlg()
 
 void TestQgsProcessingCheckGeometry::areaAlg()
 {
-  std::unique_ptr<QgsProcessingAlgorithm> alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryarea"_s )
-  );
+  std::unique_ptr<QgsProcessingAlgorithm> alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryarea"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -232,9 +224,7 @@ void TestQgsProcessingCheckGeometry::areaAlg()
 
 void TestQgsProcessingCheckGeometry::holeAlg()
 {
-  const std::unique_ptr<QgsProcessingAlgorithm> alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryhole"_s )
-  );
+  const std::unique_ptr<QgsProcessingAlgorithm> alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryhole"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -261,9 +251,7 @@ void TestQgsProcessingCheckGeometry::holeAlg()
 
 void TestQgsProcessingCheckGeometry::missingVertexAlg()
 {
-  const std::unique_ptr<QgsProcessingAlgorithm> alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrymissingvertex"_s )
-  );
+  const std::unique_ptr<QgsProcessingAlgorithm> alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrymissingvertex"_s ) );
   QVERIFY( alg != nullptr );
 
   const QDir testDataDir( QDir( TEST_DATA_DIR ).absoluteFilePath( "geometry_checker" ) );
@@ -305,9 +293,7 @@ void TestQgsProcessingCheckGeometry::containedAlg()
   QFETCH( QgsVectorLayer *, layerToTest );
   QFETCH( int, expectedErrorCount );
 
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrycontained"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrycontained"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -335,9 +321,7 @@ void TestQgsProcessingCheckGeometry::containedAlg()
 
 void TestQgsProcessingCheckGeometry::degeneratePolygonAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrydegeneratepolygon"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrydegeneratepolygon"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -375,9 +359,7 @@ void TestQgsProcessingCheckGeometry::segmentLengthAlg()
   QFETCH( QgsVectorLayer *, layerToTest );
   QFETCH( int, expectedErrorCount );
 
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrysegmentlength"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrysegmentlength"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -415,9 +397,7 @@ void TestQgsProcessingCheckGeometry::selfIntersectionAlg()
 {
   QFETCH( QgsVectorLayer *, layerToTest );
   QFETCH( int, expectedErrorCount );
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryselfintersection"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryselfintersection"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -444,9 +424,7 @@ void TestQgsProcessingCheckGeometry::selfIntersectionAlg()
 
 void TestQgsProcessingCheckGeometry::dangleAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrydangle"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrydangle"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -484,9 +462,7 @@ void TestQgsProcessingCheckGeometry::duplicateNodesAlg()
   QFETCH( QgsVectorLayer *, layerToTest );
   QFETCH( int, expectedErrorCount );
 
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryduplicatenodes"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryduplicatenodes"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -513,9 +489,7 @@ void TestQgsProcessingCheckGeometry::duplicateNodesAlg()
 
 void TestQgsProcessingCheckGeometry::followBoundariesAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryfollowboundaries"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryfollowboundaries"_s ) );
   QVERIFY( alg != nullptr );
 
   const QDir testDataDir( QDir( TEST_DATA_DIR ).absoluteFilePath( "geometry_checker" ) );
@@ -547,9 +521,7 @@ void TestQgsProcessingCheckGeometry::followBoundariesAlg()
 
 void TestQgsProcessingCheckGeometry::overlapAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryoverlap"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryoverlap"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -588,9 +560,7 @@ void TestQgsProcessingCheckGeometry::selfContactAlg()
   QFETCH( QgsVectorLayer *, layerToTest );
   QFETCH( int, expectedErrorCount );
 
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryselfcontact"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometryselfcontact"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -617,9 +587,7 @@ void TestQgsProcessingCheckGeometry::selfContactAlg()
 
 void TestQgsProcessingCheckGeometry::sliverPolygonAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrysliverpolygon"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrysliverpolygon"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -648,9 +616,7 @@ void TestQgsProcessingCheckGeometry::sliverPolygonAlg()
 
 void TestQgsProcessingCheckGeometry::gapAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrygap"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrygap"_s ) );
   QVERIFY( alg != nullptr );
 
   const QDir testDataDir( QDir( TEST_DATA_DIR ).absoluteFilePath( "geometry_checker" ) );
@@ -734,9 +700,7 @@ void TestQgsProcessingCheckGeometry::gapAlg()
 
 void TestQgsProcessingCheckGeometry::pointInPolygonAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrypointinpolygon"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrypointinpolygon"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -760,9 +724,7 @@ void TestQgsProcessingCheckGeometry::pointInPolygonAlg()
 
 void TestQgsProcessingCheckGeometry::pointCoveredByLineAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrypointcoveredbyline"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrypointcoveredbyline"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -786,9 +748,7 @@ void TestQgsProcessingCheckGeometry::pointCoveredByLineAlg()
 
 void TestQgsProcessingCheckGeometry::lineLayerIntersectionAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrylinelayerintersection"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrylinelayerintersection"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -816,9 +776,7 @@ void TestQgsProcessingCheckGeometry::lineLayerIntersectionAlg()
 
 void TestQgsProcessingCheckGeometry::lineIntersectionAlg()
 {
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrylineintersection"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrylineintersection"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
@@ -856,9 +814,7 @@ void TestQgsProcessingCheckGeometry::multipartAlg()
 {
   QFETCH( QgsVectorLayer *, layerToTest );
   QFETCH( int, expectedErrorCount );
-  std::unique_ptr< QgsProcessingAlgorithm > alg(
-    QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrymultipart"_s )
-  );
+  std::unique_ptr< QgsProcessingAlgorithm > alg( QgsApplication::processingRegistry()->createAlgorithmById( u"native:checkgeometrymultipart"_s ) );
   QVERIFY( alg != nullptr );
 
   QVariantMap parameters;
